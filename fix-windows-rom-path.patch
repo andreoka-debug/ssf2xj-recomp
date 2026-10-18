@@ -1,0 +1,40 @@
+diff --git a/machine/romset.cpp b/machine/romset.cpp
+index ccacfce..850aecd 100644
+--- a/machine/romset.cpp
++++ b/machine/romset.cpp
+@@ -247,24 +247,28 @@ RomList ParseRomList(const char *program, const char *graphics, const char *soun
+ bool LoadRomSet(const std::string &path, const RomList &list, RomSet &set, std::string &error) {
+     std::vector<uint8_t> data;
+     Places folder;
++    // Native file pickers on Windows return backslashes. The zip search below
++    // joins paths with '/', so normalize before finding the sibling parent set.
++    std::string normalized = path;
++    std::replace(normalized.begin(), normalized.end(), '\\', '/');
+     {
+         struct stat info;
+-        if (stat(path.c_str(), &info) != 0) {
++        if (stat(normalized.c_str(), &info) != 0) {
+             error = "there is no " + path;
+             return false;
+         }
+         std::vector<std::string> zips;
+         std::string beside;
+         if (S_ISDIR(info.st_mode)) {
+-            folder.folder = path;
+-            beside = path;
++            folder.folder = normalized;
++            beside = normalized;
+         } else {
+-            zips.push_back(path);
+-            const size_t slash = path.find_last_of('/');
+-            beside = slash == std::string::npos ? "." : path.substr(0, slash);
++            zips.push_back(normalized);
++            const size_t slash = normalized.find_last_of('/');
++            beside = slash == std::string::npos ? "." : normalized.substr(0, slash);
+         }
+         for (const std::string &name : {list.set, list.parent}) {
+-            if (!name.empty() && beside + "/" + name + ".zip" != path) {
++            if (!name.empty() && beside + "/" + name + ".zip" != normalized) {
+                 zips.push_back(beside + "/" + name + ".zip");
+             }
+         }

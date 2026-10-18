@@ -1,0 +1,13 @@
+_build/
+roms/
+userdata/
+*.zip
+*.7z
+*.nv
+*.bin
+*.exe
+*.dll
+*.state
+*.png
+*.wav
+*.log
