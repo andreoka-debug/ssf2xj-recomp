@@ -11,7 +11,24 @@ void TrainingFrame(Machine &machine);
 void TrainingState(Archive &ar);
 bool TrainingActive();
 
+void EasySelectGouki(Machine &machine) {
+    if (machine.ram[0x8009] != 0) return;
+    constexpr uint16_t shortcut = kUp | kPunch3 | kKick3;
+    for (int player = 0; player < 2; ++player) {
+        const uint32_t base = player ? 0xFF8BDF : 0xFF87DF;
+        if (Ram8(base) == 0 && (machine.players[player] & shortcut) == shortcut) {
+            SetRam8(player ? 0xFF8BFF : 0xFF87FF, 0x0A);
+            SetRam8(player ? 0xFF8C0B : 0xFF880B, 0x01);
+        }
+    }
+}
+
 void RegisterGame() {
+    // The SSF2X QSound program's four-byte song entries start here. Entries
+    // 0x01-0x3F contain music (0x38 is not a song); later entries are effects.
+    // This enables the toolkit's custom-soundtrack feature and playlist.
+    TheGame().songTable = 0x9006;
+    TheGame().songCount = 0x40;
     RegisterTraining();
     TheGame().features.push_back({"wall_helper", "Display", "Wall helper",
         "Show the original 4:3 playfield limits as two faint dashed lines in wide fights. Useful for wall moves.", 0});
@@ -23,6 +40,7 @@ void RegisterGame() {
     // At the true camera edges, safe wide covers only the columns beyond the stage.
     TheGame().beforeFrame = [](Machine &machine) {
         TrainingBeforeFrame(machine);
+        EasySelectGouki(machine);
         const uint8_t state = machine.ram[0x8009];
         const bool fightState = state == 8 || state == 10 || state == 12;
         // Keep the same picture width through the score count and short pre-round state.

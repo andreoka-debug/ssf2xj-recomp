@@ -26,10 +26,10 @@ index 9ec1f81..c4f8c9c 100644
          const recomp::text::Color line{box.r, box.g, box.b, 255};
 diff --git a/port/localization.h b/port/localization.h
 new file mode 100644
-index 0000000..6f0f6e0
+index 0000000..59aee69
 --- /dev/null
 +++ b/port/localization.h
-@@ -0,0 +1,151 @@
+@@ -0,0 +1,152 @@
 +// SPDX-License-Identifier: GPL-3.0-only
 +// PC in-game menu translations. English strings remain the stable menu identifiers.
 +#pragma once
@@ -113,6 +113,7 @@ index 0000000..6f0f6e0
 +        {"Recording slot", "Espaço de gravação", "Ranura de grabación", "記録スロット", "Emplacement d'enregistrement"},
 +        {"Original choice", "Escolha original", "Elección original", "元の選択", "Choix d'origine"},
 +        {"Choose on screen", "Escolher na tela", "Elegir en pantalla", "画面で選択", "Choisir à l'écran"},
++        {"Gouki (Akuma)", "Gouki (Akuma)", "Gouki (Akuma)", "豪鬼（アクマ）", "Gouki (Akuma)"},
 +        {"Manual", "Manual", "Manual", "手動", "Manuel"},
 +        {"Stand", "Em pé", "De pie", "立つ", "Debout"},
 +        {"Crouch", "Agachar", "Agacharse", "しゃがむ", "Accroupi"},

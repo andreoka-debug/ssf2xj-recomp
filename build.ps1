@@ -25,7 +25,8 @@ if ($commit -ne 'fdd55ecbd20c9197c85ef526ecebd44879ced82e') {
 $patches = @(
     @{ Name = 'display-wide-crt.patch'; Marker = 'machine/machine.cpp' },
     @{ Name = 'fix-windows-rom-path.patch'; Marker = 'machine/romset.cpp' },
-    @{ Name = 'interface-wall-wide.patch'; Marker = 'recomp-common/text.h' }
+    @{ Name = 'interface-wall-wide.patch'; Marker = 'recomp-common/text.h' },
+    @{ Name = 'launcher-language.patch'; Marker = 'recomp-common/launcher/src/ui.cpp' }
 )
 foreach ($item in $patches) {
     $name = $item.Name

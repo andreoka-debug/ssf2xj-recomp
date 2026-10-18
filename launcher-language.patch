@@ -1,0 +1,305 @@
+diff --git a/launcher/src/description.cpp b/launcher/src/description.cpp
+index 7e15689..0cbdcac 100644
+--- a/launcher/src/description.cpp
++++ b/launcher/src/description.cpp
+@@ -119,14 +119,10 @@ std::vector<FeatureSwitch> feature_switches(const std::string& all) {
+ // What a launcher is told about one game
+ launcher::Description describe_game(const GameInfo& game) {
+     launcher::Description d;
+-    const std::string set = std::string(game.rom_set) + " (" + game.rom_name + ")";
+     d.original = "in the arcade";
+     d.file_heading = "ROM SET";
+-    d.file_intro = keep("Choose your own copy of the game: the arcade ROM set " + set +
+-                        ", with its key file. Only this version works. It stays where it is: the launcher only reads it.\n\nWhile playing, Esc or F1 on "
+-                        "the keyboard, or the left stick's click (or Start and Select together) on a gamepad, opens the in-game menu: training mode "
+-                        "and the other modes, save states, speed, and every feature.");
+-    d.file_empty = keep("None chosen. Drop " + std::string(game.rom_set) + ".zip or its folder here, or choose the zip.");
++    d.file_intro = "Choose your own ssf2xj.zip ROM set. The launcher reads it without changing it. Esc or F1 opens the in-game menu.";
++    d.file_empty = "No ROM chosen. Choose ssf2xj.zip.";
+     d.file_not_set_up = "The game isn't set up yet. Open the launcher (without --play) once to choose your ROM set.";
+     d.file_filter = {"ROM set (zip)", "zip"};
+     d.file_key = "rom";
+diff --git a/recomp-common/launcher/src/app.cpp b/recomp-common/launcher/src/app.cpp
+index a2335fa..9971426 100644
+--- a/recomp-common/launcher/src/app.cpp
++++ b/recomp-common/launcher/src/app.cpp
+@@ -262,6 +262,7 @@ App::App(SDL_Window* window)
+     for (size_t which = 0; which < slots_.size(); which++) {
+         Slot& one = *slots_[which];
+         one.settings.load();
++        if (which == 0) ui::set_language(std::atoi(one.settings.get("features", "interface_language").c_str()));
+         // A collection's game that had a launcher of its own: where its file was and its Display switches, from
+         // that launcher's launcher.ini (in the game's folder, which the collection keeps using)
+         if (collection_ && prefs_.get(one.file_section, one.about->file_key).empty()) {
+@@ -650,6 +651,7 @@ void App::set_preset(const std::string& name) {
+ void App::set_feature(Slot& one, size_t index, int value) {
+     recomp::SetFeature(one.settings, one.features, index, value);
+     one.settings.save();
++    if (one.features[index].name == "interface_language") ui::set_language(value);
+ }
+ 
+ void App::set_shared(size_t index, int value) {
+@@ -789,6 +791,7 @@ void App::frame() {
+     for (auto& one : slots_) {
+         if (one->was_running && !one->game.running()) {
+             one->settings.load();
++            if (one.get() == slots_.front().get()) ui::set_language(std::atoi(one->settings.get("features", "interface_language").c_str()));
+             after_game(*one);
+             show_focus_ = interactive_ && SDL_HasGamepad();  // (back from the game with a gamepad in hand)
+         }
+@@ -1184,6 +1187,20 @@ void App::play_button(size_t which, float width) {
+ 
+ void App::game_page(float width) {
+     layout::heading(LAUNCHER_GAME_NAME, about_.file_intro, width);
++    ui::text("LANGUAGE", Font::Semibold, ui::size::kDetail, ui::palette().secondary);
++    ui::gap(10);
++    Card language_card(width);
++    row(width, "Interface language", "Changes the launcher and game menus.", 190.0f, 36.0f, [&] {
++        int chosen = ui::language();
++        const std::vector<std::string> languages = {"English", "Portuguese", "Spanish", "Japanese", "French"};
++        if (ui::dropdown("##launcher-language", languages, chosen, 190.0f)) {
++            ui::set_language(chosen);
++            slot().settings.set("features", "interface_language", std::to_string(chosen));
++            slot().settings.save();
++        }
++    });
++    language_card.end();
++    ui::gap(24);
+     file_card(0, width);
+     display_cards(0, width);
+     ui::gap(28);
+diff --git a/recomp-common/launcher/src/ui.cpp b/recomp-common/launcher/src/ui.cpp
+index 74aaa63..3bf5903 100644
+--- a/recomp-common/launcher/src/ui.cpp
++++ b/recomp-common/launcher/src/ui.cpp
+@@ -7,9 +7,11 @@
+ 
+ #include <algorithm>
+ #include <cmath>
++#include <filesystem>
+ #include <unordered_map>
+ 
+ #include "embedded.h"
++#include "../../../port/localization.h"
+ 
+ namespace ui {
+ 
+@@ -37,6 +39,7 @@ float g_delta = 0.0f;
+ bool g_animating = false;
+ bool g_focus_next = false;
+ int g_frames = 0;
++int g_language = 0;
+ ImFont* g_fonts[2] = {};
+ std::unordered_map<ImGuiID, float> g_values;
+ 
+@@ -166,8 +169,119 @@ void apply_style(float value) {
+ 
+ void load_fonts() {
+     ImGui::GetIO().Fonts->Clear();
+-    add_font(0, "font_regular");
+-    add_font(1, "font_semibold");
++    for (int index = 0; index < 2; ++index) {
++        add_font(index, index ? "font_semibold" : "font_regular");
++#ifdef _WIN32
++        // Inter covers Latin; use the system font for Japanese without
++        // redistributing a font with the game.
++        const char* path = index ? "C:/Windows/Fonts/meiryob.ttc" : "C:/Windows/Fonts/meiryo.ttc";
++        if (!std::filesystem::exists(path)) path = "C:/Windows/Fonts/msgothic.ttc";
++        if (std::filesystem::exists(path)) {
++            ImFontConfig config;
++            config.MergeMode = true;
++            ImGui::GetIO().Fonts->AddFontFromFileTTF(path, size::kBody, &config);
++        }
++#endif
++    }
++}
++
++void set_language(int value) { g_language = std::clamp(value, 0, 4); }
++int language() { return g_language; }
++
++std::string localize(const char* source) {
++    if (!source || g_language == 0) return source ? source : "";
++    std::string translated = port::Localize(source, g_language);
++    if (translated != source) return translated;
++    struct Word { const char* en; const char* pt; const char* es; const char* ja; const char* fr; };
++    static constexpr Word words[] = {
++        {"Features", "Recursos", "Funciones", "機能", "Fonctions"},
++        {"Controllers", "Controles", "Controles", "コントローラー", "Commandes"},
++        {"Controls", "Controles", "Controles", "操作", "Commandes"},
++        {"Game", "Jogo", "Juego", "ゲーム", "Jeu"},
++        {"native port", "versão nativa", "versión nativa", "ネイティブ版", "version native"},
++        {"Unofficial local prototype.", "Protótipo local não oficial.", "Prototipo local no oficial.", "非公式ローカル試作版。", "Prototype local non officiel."},
++        {"ROM SET", "ROM DO JOGO", "ROM DEL JUEGO", "ゲームROM", "ROM DU JEU"},
++        {"DISPLAY", "TELA", "PANTALLA", "画面", "AFFICHAGE"},
++        {"SOUND", "SOM", "SONIDO", "音声", "SON"},
++        {"LANGUAGE", "IDIOMA", "IDIOMA", "言語", "LANGUE"},
++        {"TRAINING MODE", "MODO DE TREINO", "MODO DE ENTRENAMIENTO", "トレーニングモード", "MODE ENTRAÎNEMENT"},
++        {"DUMMY", "BONECO", "MANIQUÍ", "ダミー", "MANNEQUIN"},
++        {"GAME", "JOGO", "JUEGO", "ゲーム", "JEU"},
++        {"Full screen", "Tela cheia", "Pantalla completa", "全画面表示", "Plein écran"},
++        {"F11 switches while playing.", "F11 alterna durante o jogo.", "F11 cambia durante el juego.", "プレイ中にF11で切り替え。", "F11 permet de changer en jeu."},
++        {"Muted", "Mudo", "Silencio", "ミュート", "Muet"},
++        {"Start the game with no sound. The game's menu switches it back on.", "Inicia o jogo sem som. O menu do jogo pode reativá-lo.", "Inicia el juego sin sonido. El menú del juego puede reactivarlo.", "無音でゲームを開始します。ゲーム内メニューから再有効化できます。", "Démarre le jeu sans son. Le menu du jeu permet de le réactiver."},
++        {"Custom soundtrack", "Trilha sonora personalizada", "Banda sonora personalizada", "カスタムサウンドトラック", "Bande-son personnalisée"},
++        {"Your own music, played in place of the board's music while the Custom soundtrack feature is on: a folder of music plays as a playlist, or files named as the songs.txt the game writes there replace those songs. None chosen: the soundtrack folder in the game's own folder.",
++         "Suas músicas substituem as do jogo quando a opção de trilha personalizada está ativa. Escolha uma pasta para reproduzir uma lista ou arquivos com os nomes de songs.txt para substituir músicas específicas. Sem escolha: usa a pasta soundtrack do jogo.",
++         "Tu música reemplaza la del juego con la banda sonora personalizada activa. Elige una carpeta para reproducirla como lista, o archivos con los nombres de songs.txt para reemplazar canciones. Sin selección: se usa la carpeta soundtrack del juego.",
++         "カスタムサウンドトラック有効時にゲームの曲を置き換えます。フォルダー内の曲を順に再生するか、songs.txtの曲名に合わせたファイルで個別に置き換えます。未選択ならゲームフォルダー内のsoundtrackを使います。",
++         "Votre musique remplace celle du jeu quand la bande-son personnalisée est activée. Choisissez un dossier pour une liste de lecture, ou des fichiers nommés comme dans songs.txt. Sans choix : dossier soundtrack du jeu."},
++        {"Pure plays the game exactly as it was in the arcade. Enhanced turns on the improvements; or pick your own.",
++         "Puro reproduz o jogo como no arcade. Melhorado ativa as melhorias; ou escolha cada opção.",
++         "Puro reproduce el juego como en el arcade. Mejorado activa las mejoras; o elige cada opción.",
++         "ピュアはアーケード版そのままです。拡張では改善機能が有効になります。個別設定も選べます。",
++         "Pur reproduit le jeu comme en arcade. Amélioré active les améliorations ; vous pouvez aussi choisir chaque option."},
++        {"Pure: as in the arcade", "Puro: como no arcade", "Puro: como en el arcade", "ピュア：アーケード版", "Pur : comme en arcade"},
++        {"Choose your own ssf2xj.zip ROM set. The launcher reads it without changing it. Esc or F1 opens the in-game menu.",
++         "Escolha sua ROM ssf2xj.zip. O launcher apenas a lê. Esc ou F1 abre o menu durante o jogo.",
++         "Elige tu ROM ssf2xj.zip. El launcher solo la lee. Esc o F1 abre el menú durante el juego.",
++         "自分のssf2xj.zipを選択してください。ROMは読み取り専用です。EscまたはF1でゲーム内メニューを開きます。",
++         "Choisissez votre ROM ssf2xj.zip. Le lanceur la lit sans la modifier. Esc ou F1 ouvre le menu en jeu."},
++        {"No ROM chosen. Choose ssf2xj.zip.", "Nenhuma ROM selecionada. Escolha ssf2xj.zip.", "Ninguna ROM seleccionada. Elige ssf2xj.zip.", "ROMが未選択です。ssf2xj.zipを選んでください。", "Aucune ROM sélectionnée. Choisissez ssf2xj.zip."},
++        {"Choose…", "Escolher…", "Elegir…", "選択…", "Choisir…"},
++        {"Choose folder…", "Escolher pasta…", "Elegir carpeta…", "フォルダーを選択…", "Choisir un dossier…"},
++        {"Play", "Jogar", "Jugar", "プレイ", "Jouer"},
++        {"Play###play", "Jogar###play", "Jugar###play", "プレイ###play", "Jouer###play"},
++        {"Playing…###play", "Jogando…###play", "Jugando…###play", "プレイ中…###play", "En cours…###play"},
++        {"Playing…", "Jogando…", "Jugando…", "プレイ中…", "En cours…"},
++        {"Checking…", "Verificando…", "Comprobando…", "確認中…", "Vérification…"},
++        {"Interface language", "Idioma da interface", "Idioma de la interfaz", "表示言語", "Langue de l'interface"},
++        {"Changes the launcher and game menus.", "Altera o idioma do launcher e dos menus do jogo.", "Cambia el idioma del launcher y los menús del juego.", "ランチャーとゲーム内メニューの言語を変更します。", "Change la langue du lanceur et des menus du jeu."},
++        {"The keyboard always works. Gamepads show up here when connected; press buttons and move the sticks to check they work.",
++         "O teclado sempre funciona. Conecte um controle para testar botões e analógicos aqui.",
++         "El teclado siempre funciona. Conecta un mando para probar sus botones y palancas.",
++         "キーボードは常に使えます。ゲームパッドを接続してボタンとスティックを確認できます。",
++         "Le clavier fonctionne toujours. Branchez une manette pour tester ses boutons et sticks."},
++        {"CONNECTED", "CONECTADOS", "CONECTADOS", "接続中", "CONNECTÉS"},
++        {"No controllers connected", "Nenhum controle conectado", "Ningún mando conectado", "コントローラー未接続", "Aucune manette connectée"},
++        {"TEST", "TESTE", "PRUEBA", "テスト", "TEST"},
++        {"Test", "Testar", "Probar", "テスト", "Tester"},
++        {"Testing", "Testando", "Probando", "テスト中", "Test en cours"},
++        {"BUTTONS", "BOTÕES", "BOTONES", "ボタン", "BOUTONS"},
++        {"Buttons", "Botões", "Botones", "ボタン", "Boutons"},
++        {"Sticks", "Analógicos", "Palancas", "スティック", "Sticks"},
++        {"(press any button)", "(pressione um botão)", "(pulsa cualquier botón)", "（ボタンを押してください）", "(appuyez sur un bouton)"},
++        {"Keyboard", "Teclado", "Teclado", "キーボード", "Clavier"},
++        {"Gamepad", "Controle", "Mando", "ゲームパッド", "Manette"},
++        {"Player 1", "Jogador 1", "Jugador 1", "プレイヤー１", "Joueur 1"},
++        {"Player 2", "Jogador 2", "Jugador 2", "プレイヤー２", "Joueur 2"},
++        {"Controller 1", "Controle 1", "Mando 1", "コントローラー１", "Manette 1"},
++        {"Controller 2", "Controle 2", "Mando 2", "コントローラー２", "Manette 2"},
++        {"Back to the usual layout", "Restaurar padrão", "Restaurar ajustes", "標準設定に戻す", "Rétablir les réglages"},
++        {"The keyboard and the first gamepad. Click a button here, then press the key or the gamepad button for it.",
++         "Teclado e primeiro controle. Clique em um botão e pressione a tecla ou o botão desejado.",
++         "Teclado y primer mando. Haz clic en un botón y pulsa la tecla o el botón que quieras asignar.",
++         "キーボードと１つ目のゲームパッド。項目をクリックしてから割り当てるキーまたはボタンを押します。",
++         "Clavier et première manette. Cliquez sur une commande, puis appuyez sur la touche ou le bouton à attribuer."},
++        {"The keyboard and the second gamepad. Click a button here, then press the key or the gamepad button for it.",
++         "Teclado e segundo controle. Clique em um botão e pressione a tecla ou o botão desejado.",
++         "Teclado y segundo mando. Haz clic en un botón y pulsa la tecla o el botón que quieras asignar.",
++         "キーボードと２つ目のゲームパッド。項目をクリックしてから割り当てるキーまたはボタンを押します。",
++         "Clavier et deuxième manette. Cliquez sur une commande, puis appuyez sur la touche ou le bouton à attribuer."},
++        {"Press a button...", "Pressione um botão...", "Pulsa un botón...", "ボタンを押してください…", "Appuyez sur un bouton…"},
++        {"Press a key...", "Pressione uma tecla...", "Pulsa una tecla...", "キーを押してください…", "Appuyez sur une touche…"},
++        {"Search features", "Buscar recursos", "Buscar funciones", "機能を検索", "Rechercher des fonctions"},
++        {"Enhanced: recommended", "Melhorado: recomendado", "Mejorado: recomendado", "拡張：おすすめ", "Amélioré : recommandé"},
++        {"Custom", "Personalizado", "Personalizado", "カスタム", "Personnalisé"},
++        {"Cancel", "Cancelar", "Cancelar", "キャンセル", "Annuler"},
++        {"Use this folder", "Usar esta pasta", "Usar esta carpeta", "このフォルダーを使う", "Utiliser ce dossier"},
++        {"Clear", "Limpar", "Borrar", "クリア", "Effacer"},
++    };
++    for (const Word& word : words) {
++        if (translated == word.en) return g_language == 1 ? word.pt : g_language == 2 ? word.es : g_language == 3 ? word.ja : word.fr;
++    }
++    return translated;
+ }
+ 
+ void begin_frame(float delta) {
+@@ -233,6 +347,8 @@ void pop_font() {
+ }
+ 
+ void text(const char* value, Font font, float value_size, ImU32 text_color, float wrap) {
++    const std::string shown = localize(value);
++    value = shown.c_str();
+     push_font(font, value_size);
+     ImGui::PushStyleColor(ImGuiCol_Text, text_color);
+     if (wrap > 0.0f) {
+@@ -247,6 +363,8 @@ void text(const char* value, Font font, float value_size, ImU32 text_color, floa
+ }
+ 
+ ImVec2 text_size(const char* value, Font font, float value_size, float wrap) {
++    const std::string shown = localize(value);
++    value = shown.c_str();
+     push_font(font, value_size);
+     ImVec2 result = ImGui::CalcTextSize(value, nullptr, false, wrap > 0.0f ? wrap : -1.0f);
+     pop_font();
+@@ -283,6 +401,8 @@ void gap(float value) {
+ bool button(const char* label, Kind kind, float width, bool enabled, float height) {
+     ImGuiWindow* window = ImGui::GetCurrentWindow();
+     ImGuiID id = window->GetID(label);
++    const std::string translated_label = localize(label);
++    label = translated_label.c_str();
+     const char* end = ImGui::FindRenderedTextEnd(label);
+     float font_size = height >= 44.0f ? 16.0f : size::kBody;
+     push_font(Font::Semibold, font_size);
+@@ -368,7 +488,8 @@ bool dropdown(const char* id_text, const std::vector<std::string>& labels, int&
+     float hover = animate(id + 1, hovered || open ? 1.0f : 0.0f, 22.0f);
+     window->DrawList->AddRectFilled(rect.Min, rect.Max, mix(p.control, p.control_hover, hover), px(10));
+     push_font(Font::Regular, size::kBody);
+-    const char* current = index >= 0 && index < static_cast<int>(labels.size()) ? labels[static_cast<size_t>(index)].c_str() : "";
++    const std::string shown_label = localize(index >= 0 && index < static_cast<int>(labels.size()) ? labels[static_cast<size_t>(index)].c_str() : "");
++    const char* current = shown_label.c_str();
+     float line = ImGui::GetFontSize();
+     window->DrawList->AddText(ImVec2(rect.Min.x + px(14), std::round(rect.Min.y + (box.y - line) * 0.5f)), p.text, current);
+     pop_font();
+@@ -433,7 +554,8 @@ bool search_box(const char* id_text, char* buffer, size_t size, const char* hint
+         ImGui::ClearActiveID();
+     }
+     ImGui::SetNextItemWidth(box.x - px(34 + 36));
+-    bool changed = ImGui::InputTextWithHint(id_text, hint, buffer, size, ImGuiInputTextFlags_EscapeClearsAll);
++    const std::string shown_hint = localize(hint);
++    bool changed = ImGui::InputTextWithHint(id_text, shown_hint.c_str(), buffer, size, ImGuiInputTextFlags_EscapeClearsAll);
+     if (g_focus_next) {
+         g_focus_next = false;
+         focus_item();
+@@ -466,6 +588,8 @@ bool search_box(const char* id_text, char* buffer, size_t size, const char* hint
+ bool nav_item(const char* label, bool active, float width, bool reachable) {
+     ImGuiWindow* window = ImGui::GetCurrentWindow();
+     ImGuiID id = window->GetID(label);
++    const std::string shown = localize(label);
++    label = shown.c_str();
+     ImVec2 box(px(width), px(36));
+     ImRect rect(window->DC.CursorPos, window->DC.CursorPos + box);
+     bool hovered = false;
+@@ -486,6 +610,8 @@ bool nav_item(const char* label, bool active, float width, bool reachable) {
+ bool list_item(const char* label, bool active, float width) {
+     ImGuiWindow* window = ImGui::GetCurrentWindow();
+     ImGuiID id = window->GetID(label);
++    const std::string shown = localize(label);
++    label = shown.c_str();
+     ImVec2 box(px(width), px(34));
+     ImRect rect(window->DC.CursorPos, window->DC.CursorPos + box);
+     bool hovered = false;
+@@ -522,7 +648,8 @@ bool key_chip(const char* id_text, const char* label, bool capturing, float widt
+     float line = ImGui::GetFontSize();
+     ImVec2 at(rect.Min.x + px(12), std::round(rect.Min.y + (box.y - line) * 0.5f));
+     ImVec4 clip(rect.Min.x, rect.Min.y, rect.Max.x - px(8), rect.Max.y);
+-    window->DrawList->AddText(nullptr, 0.0f, at, capturing ? p.accent : p.text, label, nullptr, 0.0f, &clip);
++    const std::string shown = localize(label);
++    window->DrawList->AddText(nullptr, 0.0f, at, capturing ? p.accent : p.text, shown.c_str(), nullptr, 0.0f, &clip);
+     pop_font();
+     focus_ring(rect, id, px(10));
+     return pressed;
+diff --git a/recomp-common/launcher/src/ui.h b/recomp-common/launcher/src/ui.h
+index 3e63f8a..8fcba97 100644
+--- a/recomp-common/launcher/src/ui.h
++++ b/recomp-common/launcher/src/ui.h
+@@ -51,6 +51,9 @@ bool dark();
+ const Palette& palette();
+ void apply_style(float scale);
+ void load_fonts();
++void set_language(int language);
++int language();
++std::string localize(const char* text);
+ float scale();
+ float px(float value);
+ 

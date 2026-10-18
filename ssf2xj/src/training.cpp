@@ -150,9 +150,17 @@ void Boot(Machine &machine) {
 
 void SelectDummyCharacter(Machine &machine) {
     const int choice = FeatureValue("training_character") - 1;
-    if (choice < 0 || choice > 15 || g_selectDone || ++g_afterBootFrames < 200 || Ram8(kMode) != 0) {
+    if (choice < 0 || choice > 16 || ++g_afterBootFrames < 200 || Ram8(kMode) != 0) {
         return;
     }
+    // Gouki has no portrait-grid slot. Select Ryu's slot with the game's own
+    // Gouki palette and character flag, as verified against the arcade set.
+    if (choice == 16) {
+        SetRam8(0xFF8BFF, 0x0A);
+        SetRam8(0xFF8C0B, 0x01);
+    }
+    if (g_selectDone) return;
+    const int target = choice == 16 ? 0 : choice;
     // Character-select portrait grid, traced from P2 directional inputs on ssf2xj.
     constexpr uint8_t grid[2][8] = {
         {0, 1, 2, 3, 13, 14, 10, 9},
@@ -160,14 +168,14 @@ void SelectDummyCharacter(Machine &machine) {
     };
     if (g_selectCycle == 0) {
         const int current = Ram8(0xFF8BDF);
-        if (current == choice) {
+        if (current == target) {
             g_selectPulse = kPunch1;
         } else {
             int row = -1, column = -1, targetRow = -1, targetColumn = -1;
             for (int r = 0; r < 2; ++r) {
                 for (int c = 0; c < 8; ++c) {
                     if (grid[r][c] == current) { row = r; column = c; }
-                    if (grid[r][c] == choice) { targetRow = r; targetColumn = c; }
+                    if (grid[r][c] == target) { targetRow = r; targetColumn = c; }
                 }
             }
             if (row < 0 || targetRow < 0) {
@@ -407,7 +415,7 @@ void RegisterTraining() {
                              "Choose the training opponent automatically on the character-select screen.", 0,
                              {"Choose on screen", "Ryu", "Honda", "Blanka", "Guile", "Ken", "Chun-Li",
                               "Zangief", "Dhalsim", "Dictator", "Sagat", "Boxer", "Claw", "Cammy",
-                              "T. Hawk", "Fei-Long", "Dee Jay"}});
+                              "T. Hawk", "Fei-Long", "Dee Jay", "Gouki (Akuma)"}});
     game.features.push_back({"dummy_record", "Dummy", "Record",
                              "P1 controls P2 while its inputs are recorded, up to 20 seconds in the selected slot.",
                              kFeatureExclusive});
