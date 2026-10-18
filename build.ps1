@@ -57,7 +57,8 @@ $env:TMP = $tempFolder
 $env:TEMP = $tempFolder
 Push-Location $toolkit
 try {
-    & (Join-Path $MsysRoot 'usr\bin\bash.exe') -lc 'export TMPDIR="$PWD/work-tmp" TMP="$PWD/work-tmp" TEMP="$PWD/work-tmp"; make GAME=ssf2xj ROM="$RECOMP_ROM_PATH" port'
+    & (Join-Path $MsysRoot 'usr\bin\bash.exe') -lc 'export TMPDIR="$PWD/work-tmp" TMP="$PWD/work-tmp" TEMP="$PWD/work-tmp"; make GAME=ssf2xj ROM="$RECOMP_ROM_PATH" launcher'
     if ($LASTEXITCODE -ne 0) { throw 'A compilação falhou.' }
 } finally { Pop-Location }
 Write-Host "Pronto: $(Join-Path $toolkit 'build\ssf2xj\ssf2xj.exe')"
+Write-Host "Menu: $(Join-Path $toolkit 'build\ssf2xj\ssf2xj-launcher.exe')"

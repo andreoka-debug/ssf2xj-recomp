@@ -18,9 +18,9 @@ Instale Git, PowerShell 7 ou Windows PowerShell, e [MSYS2 UCRT64](https://www.ms
 ./build.ps1 -RomPath 'C:\caminho\das\roms\ssf2xj.zip'
 ```
 
-O script baixa o `cps2recomp` no commit `fdd55ecbd20c9197c85ef526ecebd44879ced82e`, aplica os patches, copia os fontes e os pontos de entrada e compila `ssf2xj.exe`. Tudo o que for gerado fica em `_build/`, ignorado pelo Git. Na primeira compilação, a tradução a partir das ROMs pode demorar. O script também aceita `-MsysRoot` se o MSYS2 estiver em outro local.
+O script baixa o `cps2recomp` no commit `fdd55ecbd20c9197c85ef526ecebd44879ced82e`, aplica os patches, copia os fontes e os pontos de entrada e compila o jogo e seu launcher. Tudo o que for gerado fica em `_build/`, ignorado pelo Git. Na primeira compilação, a tradução a partir das ROMs pode demorar. O script também aceita `-MsysRoot` se o MSYS2 estiver em outro local.
 
-Para jogar, execute `play.cmd` passando o caminho da ROM, ou coloque ambos os ZIPs em `roms/` e abra `play.cmd` sem argumentos:
+Para jogar, abra `play.cmd` sem argumentos. O launcher permite escolher as ROMs e configurar os controles antes de iniciar. Se os dois ZIPs estiverem em `roms/`, a ROM principal já aparece selecionada. Para iniciar diretamente sem o launcher, passe o caminho da ROM:
 
 ```powershell
 ./play.ps1 -RomPath 'C:\caminho\das\roms\ssf2xj.zip'
