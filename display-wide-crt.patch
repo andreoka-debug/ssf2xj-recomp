@@ -381,7 +381,7 @@ index 680e423..70ad270 100644
 +    colour = vec4(rgb, 1.0);
  }
 diff --git a/video/video.cpp b/video/video.cpp
-index 754db1a..879dcff 100644
+index 754db1a..2333bca 100644
 --- a/video/video.cpp
 +++ b/video/video.cpp
 @@ -5,6 +5,7 @@
@@ -506,14 +506,15 @@ index 754db1a..879dcff 100644
 +            priority[x] = 0;
 +        }
 +    }
++    if (kWide && (wide.fillHoles || wide.fillSideHoles) && wide.side > 0) {
++        FillHoles(pens, width, !wide.fillHoles);
++    }
      if (layerMask & 1) {
          DrawObjects<kWide>(rasterLine, pens, priority, masks);
      }
 -    if (kWide && wide.fillHoles && wide.side > 0) {
 -        FillHoles(pens, width);
-+    if (kWide && (wide.fillHoles || wide.fillSideHoles) && wide.side > 0) {
-+        FillHoles(pens, width, !wide.fillHoles);
-     }
+-    }
      for (int x = 0; x < width; x++) {
 -        out[x] = m_palette[pens[x]];
 +        const bool blankSide = kWide && wide.blankSideBackground && wide.side > 0 &&

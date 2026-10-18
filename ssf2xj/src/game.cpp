@@ -35,12 +35,13 @@ void RegisterGame() {
         // Traced in multiple stages: scroll 2 moves from 0 at the left limit to 384 at the right.
         machine.video.wide.maxStageScrollX = 384;
         const bool cammyStage = machine.ram[0x8c4f] == 0x0c;
+        const bool deeJayStage = machine.ram[0x8c4f] == 0x0f;
         machine.video.wide.squareBlackEdges = shape == 3 && fight && cammyStage;
         machine.video.wide.fillHoles = shape == 4 && fight;
-        machine.video.wide.fillSideHoles = shape == 3 && fight && !cammyStage;
-        // Do not blank Dee Jay's entire extra columns. The stage has valid art there while
-        // the camera is in the middle; the camera-edge guard covers only genuinely missing art.
-        machine.video.wide.blankSideBackground = false;
+        machine.video.wide.fillSideHoles = shape == 3 && fight && !cammyStage && !deeJayStage;
+        // Dee Jay's row-scrolled sky can expose unpainted pixels in the upper side columns.
+        // Blacken only those gaps; keep valid stage tiles and objects in the wide area.
+        machine.video.wide.blankSideBackground = shape == 3 && fight && deeJayStage;
         // A Super Combo knockout paints its burst across the full raster in scroll 3, but
         // stage scrolls obscure the extra columns. FF8462/FF8862 are remaining life;
         // FinishPicture also checks for the burst so ordinary KO frames keep their stage.

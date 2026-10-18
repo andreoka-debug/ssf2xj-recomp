@@ -141,8 +141,6 @@ void Boot(Machine &machine) {
         machine.players[0] = machine.players[1] = kCoin;
     } else if ((frame >= 1230 && frame < 1234) || (frame >= 1500 && frame < 1504)) {
         machine.players[0] = machine.players[1] = kStart;
-    } else if (frame >= 1800 && frame < 1804) {
-        machine.players[0] = kStart;
     }
     if (g_bootFrames >= 1900) {
         g_boot = false;
