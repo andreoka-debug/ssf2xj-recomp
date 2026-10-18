@@ -22,13 +22,20 @@ $commit = (& git -C $toolkit rev-parse HEAD).Trim()
 if ($commit -ne 'fdd55ecbd20c9197c85ef526ecebd44879ced82e') {
     throw "O toolkit local usa outro commit: $commit"
 }
-foreach ($name in @('display-wide-crt.patch', 'fix-windows-rom-path.patch', 'interface-wall-wide.patch')) {
+$patches = @(
+    @{ Name = 'display-wide-crt.patch'; Marker = 'machine/machine.cpp' },
+    @{ Name = 'fix-windows-rom-path.patch'; Marker = 'machine/romset.cpp' },
+    @{ Name = 'interface-wall-wide.patch'; Marker = 'recomp-common/text.h' }
+)
+foreach ($item in $patches) {
+    $name = $item.Name
     $patch = Join-Path $root $name
-    & git -C $toolkit apply --reverse --check $patch 2>$null
+    $marker = "--include=$($item.Marker)"
+    & git -C $toolkit apply --ignore-whitespace --reverse --check $marker $patch 2>$null
     if ($LASTEXITCODE -eq 0) { continue }
-    & git -C $toolkit apply --check $patch
+    & git -C $toolkit apply --ignore-whitespace --check $patch
     if ($LASTEXITCODE -ne 0) { throw "O patch $name não se aplica à versão do toolkit." }
-    & git -C $toolkit apply $patch
+    & git -C $toolkit apply --ignore-whitespace $patch
     if ($LASTEXITCODE -ne 0) { throw "Falha ao aplicar $name." }
 }
 $game = Join-Path $toolkit 'games\ssf2xj'
