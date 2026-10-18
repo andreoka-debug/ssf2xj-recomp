@@ -1,0 +1,521 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index fb3d138..d11f7d3 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -77,5 +77,8 @@ endif ()
+ foreach (target ${GAME} ${GAME}-check)
+     target_include_directories(${target} PRIVATE runtime port machine fight "${WORK_DIR}/gen" "${GAME_DIR}")
+     target_link_libraries(${target} PRIVATE SDL3::SDL3 ZLIB::ZLIB)
++    if (WIN32)
++        target_link_libraries(${target} PRIVATE gdi32)
++    endif ()
+     target_compile_options(${target} PRIVATE -Wall -Wextra -Wno-unused-parameter -Wno-unused-label -Wno-unused-variable -Wno-parentheses-equality)
+ endforeach ()
+diff --git a/port/hud.cpp b/port/hud.cpp
+index 9ec1f81..c4f8c9c 100644
+--- a/port/hud.cpp
++++ b/port/hud.cpp
+@@ -50,7 +50,7 @@ void DrawHud(uint32_t *pixels, int width, int height) {
+             continue;
+         }
+         canvas.Fill(x, y, w, h, {box.r, box.g, box.b, box.fill});
+-        if (box.fill == 255) {
++        if (box.fill == 255 || box.width <= 1 || box.height <= 1) {
+             continue;
+         }
+         const recomp::text::Color line{box.r, box.g, box.b, 255};
+diff --git a/port/localization.h b/port/localization.h
+new file mode 100644
+index 0000000..6f0f6e0
+--- /dev/null
++++ b/port/localization.h
+@@ -0,0 +1,151 @@
++// SPDX-License-Identifier: GPL-3.0-only
++// PC in-game menu translations. English strings remain the stable menu identifiers.
++#pragma once
++
++#include <string>
++#include <string_view>
++
++namespace port {
++
++struct LocalizedText {
++    std::string_view en, pt, es, ja, fr;
++};
++
++inline std::string Localize(const std::string &source, int language) {
++    if (language <= 0 || language > 4 || source.empty()) return source;
++    static constexpr LocalizedText words[] = {
++        {"Menu", "Menu", "Menú", "メニュー", "Menu"},
++        {"Game", "Jogo", "Juego", "ゲーム", "Jeu"},
++        {"Display", "Imagem", "Pantalla", "画面", "Affichage"},
++        {"Sound", "Som", "Sonido", "音声", "Son"},
++        {"Alternative modes", "Modos alternativos", "Modos alternativos", "追加モード", "Modes alternatifs"},
++        {"Training mode", "Modo treino", "Modo entrenamiento", "トレーニング", "Mode entraînement"},
++        {"Dummy", "Boneco", "Muñeco", "ダミー", "Mannequin"},
++        {"Resume", "Continuar", "Continuar", "再開", "Reprendre"},
++        {"Save state", "Salvar estado", "Guardar estado", "状態を保存", "Sauvegarder"},
++        {"Load state", "Carregar estado", "Cargar estado", "状態を読込", "Charger"},
++        {"Slot", "Espaço", "Ranura", "スロット", "Emplacement"},
++        {"Speed", "Velocidade", "Velocidad", "速度", "Vitesse"},
++        {"Muted", "Mudo", "Silenciado", "ミュート", "Muet"},
++        {"On", "Ligado", "Activado", "オン", "Activé"},
++        {"Off", "Desligado", "Desactivado", "オフ", "Désactivé"},
++        {"Back", "Voltar", "Volver", "戻る", "Retour"},
++        {"Quit game", "Sair do jogo", "Salir del juego", "ゲーム終了", "Quitter le jeu"},
++        {"Insert coin", "Inserir ficha", "Insertar moneda", "コイン投入", "Insérer une pièce"},
++        {"Player 2 joins", "Entrar jogador 2", "Unir jugador 2", "２Ｐ参加", "Ajouter joueur 2"},
++        {"Test menu", "Menu de teste", "Menú de prueba", "テストメニュー", "Menu de test"},
++        {"Reset", "Reiniciar", "Reiniciar", "リセット", "Réinitialiser"},
++        {"Run-ahead", "Antecipação", "Anticipación", "先読み", "Anticipation"},
++        {"Arcade timing", "Tempo do arcade", "Tiempo arcade", "アーケード速度", "Cadence arcade"},
++        {"Scaling", "Escala", "Escala", "拡大方式", "Mise à l'échelle"},
++        {"Picture shape", "Formato da imagem", "Formato de imagen", "画面形式", "Format de l'image"},
++        {"CRT filter", "Filtro CRT", "Filtro CRT", "ＣＲＴフィルター", "Filtre CRT"},
++        {"CRT geometry", "Geometria CRT", "Geometría CRT", "ＣＲＴ曲面", "Géométrie CRT"},
++        {"Window size", "Tamanho da janela", "Tamaño de ventana", "ウィンドウサイズ", "Taille de fenêtre"},
++        {"Wall helper", "Guia da parede", "Guía de pared", "壁ガイド", "Repère de mur"},
++        {"Interface language", "Idioma da interface", "Idioma de interfaz", "表示言語", "Langue de l'interface"},
++        {"English", "Inglês", "Inglés", "英語", "Anglais"},
++        {"Portuguese", "Português", "Portugués", "ポルトガル語", "Portugais"},
++        {"Spanish", "Espanhol", "Español", "スペイン語", "Espagnol"},
++        {"Japanese", "Japonês", "Japonés", "日本語", "Japonais"},
++        {"French", "Francês", "Francés", "フランス語", "Français"},
++        {"Sharp", "Nítido", "Nítido", "くっきり", "Net"},
++        {"Whole pixels", "Pixels inteiros", "Píxeles enteros", "整数倍", "Pixels entiers"},
++        {"Smooth", "Suave", "Suave", "滑らか", "Lisse"},
++        {"Square pixels", "Pixels quadrados", "Píxeles cuadrados", "正方形ピクセル", "Pixels carrés"},
++        {"Fill", "Preencher", "Rellenar", "画面いっぱい", "Remplir"},
++        {"Wide (safe)", "Wide (seguro)", "Wide (seguro)", "ワイド（安全）", "Wide (sûr)"},
++        {"Wide (experimental)", "Wide (experimental)", "Wide (experimental)", "ワイド（実験）", "Wide (expérimental)"},
++        {"Light", "Leve", "Suave", "弱", "Léger"},
++        {"Strong", "Forte", "Fuerte", "強", "Fort"},
++        {"Flat", "Plano", "Plano", "平面", "Plat"},
++        {"Curved", "Curvo", "Curvo", "曲面", "Courbé"},
++        {"Full", "Normal", "Normal", "通常", "Normale"},
++        {"Start", "Iniciar", "Iniciar", "開始", "Démarrer"},
++        {"Start over", "Recomeçar", "Recomenzar", "最初から", "Recommencer"},
++        {"Training session", "Sessão de treino", "Sesión de entrenamiento", "練習セッション", "Session d'entraînement"},
++        {"Full health", "Vida cheia", "Vida completa", "体力最大", "Vie maximale"},
++        {"No dizzy", "Sem tontura", "Sin mareo", "気絶なし", "Sans étourdissement"},
++        {"Full super meter", "Especial cheio", "Super completo", "スーパーゲージ最大", "Jauge super pleine"},
++        {"Input display", "Exibir comandos", "Mostrar entradas", "入力表示", "Affichage des entrées"},
++        {"Damage readout", "Dano", "Daño", "ダメージ表示", "Dégâts"},
++        {"Hitboxes", "Áreas de colisão", "Áreas de impacto", "当たり判定", "Zones de collision"},
++        {"Frame data", "Dados de quadros", "Datos de fotogramas", "フレームデータ", "Données de frames"},
++        {"Frame meter", "Medidor de quadros", "Medidor de fotogramas", "フレームメーター", "Compteur de frames"},
++        {"Stage", "Cenário", "Escenario", "ステージ", "Décor"},
++        {"Player 2", "Jogador 2", "Jugador 2", "プレイヤー２", "Joueur 2"},
++        {"P2 character", "Personagem P2", "Personaje P2", "２Ｐキャラ", "Personnage J2"},
++        {"Record", "Gravar", "Grabar", "記録", "Enregistrer"},
++        {"Replay", "Reproduzir", "Reproducir", "再生", "Rejouer"},
++        {"Replay any slot", "Reproduzir qualquer espaço", "Reproducir cualquier ranura", "任意スロット再生", "Rejouer un emplacement"},
++        {"Recording slot", "Espaço de gravação", "Ranura de grabación", "記録スロット", "Emplacement d'enregistrement"},
++        {"Original choice", "Escolha original", "Elección original", "元の選択", "Choix d'origine"},
++        {"Choose on screen", "Escolher na tela", "Elegir en pantalla", "画面で選択", "Choisir à l'écran"},
++        {"Manual", "Manual", "Manual", "手動", "Manuel"},
++        {"Stand", "Em pé", "De pie", "立つ", "Debout"},
++        {"Crouch", "Agachar", "Agacharse", "しゃがむ", "Accroupi"},
++        {"Jump", "Pular", "Saltar", "跳ぶ", "Sauter"},
++        {"Back to the game.", "Voltar ao jogo.", "Volver al juego.", "ゲームに戻ります。", "Retour au jeu."},
++        {"Keeps the game as it is now in the slot.", "Salva o estado atual no espaço.", "Guarda el estado actual en la ranura.", "現在の状態を保存します。", "Sauvegarde l'état actuel."},
++        {"Goes back to the game kept in the slot.", "Carrega o estado salvo no espaço.", "Carga el estado guardado en la ranura.", "保存した状態を読み込みます。", "Charge l'état sauvegardé."},
++        {"Closes the game.", "Fecha o jogo.", "Cierra el juego.", "ゲームを終了します。", "Ferme le jeu."},
++        {"Switches the game's sound off and on.", "Liga ou desliga o som do jogo.", "Activa o silencia el sonido.", "ゲーム音声を切り替えます。", "Active ou coupe le son."},
++        {"Puts a coin in the first slot.", "Insere uma ficha para o jogador 1.", "Inserta una moneda para el jugador 1.", "１Ｐにコインを入れます。", "Insère une pièce pour le joueur 1."},
++        {"Starts the board again, as if switched off and on.", "Reinicia o jogo desde o começo.", "Reinicia el juego desde el principio.", "ゲームを最初から起動します。", "Redémarre le jeu depuis le début."},
++        {"Modes beyond the original arcade game.", "Modos adicionais ao jogo de arcade.", "Modos adicionales al juego arcade.", "アーケード版にないモードです。", "Modes ajoutés au jeu d'arcade."},
++        {"Practise against a second player or a basic dummy.", "Treine contra outro jogador ou um boneco.", "Entrena contra otro jugador o un muñeco.", "２Ｐまたはダミーを相手に練習します。", "Entraînez-vous contre un joueur ou un mannequin."},
++        {"To the first page (Left does the same).", "Volta à primeira página; esquerda também funciona.", "Vuelve a la primera página; izquierda también funciona.", "最初のページに戻ります。", "Retour à la première page."},
++        {"Left/Right: the slot (1-9) that Save state and Load state use.", "Esquerda/Direita: espaço de 1 a 9 usado para salvar e carregar.", "Izquierda/Derecha: ranura de 1 a 9 para guardar y cargar.", "左右で保存スロット（１～９）を選びます。", "Gauche/Droite : emplacement de sauvegarde (1 à 9)."},
++        {"Reset the board, add two players and open character select for practice.", "Reinicia o jogo, adiciona dois jogadores e abre a seleção para treino.", "Reinicia el juego, añade dos jugadores y abre la selección.", "ゲームを再起動して２Ｐ対戦の選択画面を開きます。", "Redémarre le jeu avec deux joueurs pour l'entraînement."},
++        {"Return to the beginning of this training round (Backspace or the gamepad's left shoulder).", "Volta ao início do round de treino (Backspace ou botão superior esquerdo).", "Vuelve al inicio del asalto (Retroceso o botón superior izquierdo).", "練習ラウンドの開始時に戻ります。", "Revient au début de la manche (Retour arrière ou gâchette gauche)."},
++        {"Keeps the clock at 99; Start opens character select. Reset ends the session.", "Mantém o tempo em 99; Iniciar abre a seleção. Reiniciar encerra o treino.", "Mantiene el reloj en 99; Iniciar abre la selección. Reiniciar termina la sesión.", "時間を９９に固定します。開始でキャラ選択、リセットで終了。", "Maintient le chrono à 99 ; Démarrer ouvre la sélection."},
++        {"Restores both fighters' health every frame so a training round does not end by knockout.", "Restaura a vida dos dois lutadores a cada quadro.", "Restaura la vida de ambos luchadores en cada fotograma.", "両者の体力を毎フレーム回復します。", "Restaure la vie des deux combattants à chaque frame."},
++        {"Clears both fighters' dizzy counters during training.", "Impede a tontura dos dois lutadores no treino.", "Impide el mareo de ambos luchadores en el entrenamiento.", "練習中の気絶値を消します。", "Empêche l'étourdissement des deux combattants."},
++        {"Keeps both super meters full during training.", "Mantém os especiais dos dois lutadores cheios.", "Mantiene llenos los medidores super de ambos luchadores.", "両者のスーパーゲージを最大に保ちます。", "Maintient les jauges super des deux combattants pleines."},
++        {"Shows both players' recent directions, buttons and held frames.", "Mostra direções, botões e duração dos comandos recentes.", "Muestra direcciones, botones y duración de las entradas.", "両者の方向・ボタン・入力時間を表示します。", "Affiche les directions, boutons et durées des entrées."},
++        {"Shows the damage of each hit and counts hits that land while the opponent reels.", "Mostra o dano de cada golpe e a contagem do combo.", "Muestra el daño de cada golpe y la cuenta del combo.", "各ヒットのダメージとコンボ数を表示します。", "Affiche les dégâts de chaque coup et le nombre de coups du combo."},
++        {"Show the game's blue vulnerability, red attack and green push boxes.", "Mostra áreas azuis de vulnerabilidade, vermelhas de ataque e verdes de empurrão.", "Muestra áreas azules de vulnerabilidad, rojas de ataque y verdes de empuje.", "青の被弾判定、赤の攻撃判定、緑の押し判定を表示します。", "Affiche les zones bleues, rouges et vertes de collision."},
++        {"Show startup, active and recovery counts measured during training.", "Mostra quadros de início, atividade e recuperação.", "Muestra fotogramas de inicio, actividad y recuperación.", "発生・持続・硬直のフレーム数を表示します。", "Affiche les frames de démarrage, d'activité et de récupération."},
++        {"Show recent startup, active, recovery and hit-reaction frames for both players.", "Mostra a linha do tempo recente dos dois jogadores.", "Muestra la línea de tiempo reciente de ambos jugadores.", "両者の最近のフレーム推移を表示します。", "Affiche la chronologie récente des deux joueurs."},
++        {"Choose the stage for the next training match; Original choice lets the game decide.", "Escolha o cenário do próximo treino; escolha original deixa o jogo decidir.", "Elige el escenario del próximo entrenamiento; la elección original deja decidir al juego.", "次の練習試合のステージを選びます。", "Choisissez le décor du prochain entraînement."},
++        {"Choose manual control, still, crouching or repeated jumps.", "Escolha controle manual, parado, agachado ou pulos repetidos.", "Elige control manual, quieto, agachado o saltos repetidos.", "手動・静止・しゃがみ・連続ジャンプを選びます。", "Choisissez manuel, immobile, accroupi ou sauts répétés."},
++        {"Choose the training opponent automatically on the character-select screen.", "Seleciona automaticamente o oponente na tela de personagens.", "Selecciona automáticamente al rival en la pantalla de personajes.", "キャラ選択画面で対戦相手を自動選択します。", "Sélectionne automatiquement l'adversaire à l'écran de choix."},
++        {"P1 controls P2 while its inputs are recorded, up to 20 seconds in the selected slot.", "P1 controla P2 e grava seus comandos por até 20 segundos no espaço escolhido.", "P1 controla a P2 y graba sus entradas hasta 20 segundos.", "１Ｐが２Ｐを操作し、最大２０秒の入力を記録します。", "J1 contrôle J2 et enregistre ses entrées pendant 20 secondes."},
++        {"P2 repeats the selected recording with a short pause between loops.", "P2 repete a gravação escolhida com uma breve pausa entre ciclos.", "P2 repite la grabación elegida con una pausa entre ciclos.", "２Ｐが選択した記録を繰り返します。", "J2 répète l'enregistrement avec une courte pause."},
++        {"P2 repeats one of the recorded slots, chosen at random each loop.", "P2 repete um dos espaços gravados, sorteado a cada ciclo.", "P2 repite una ranura grabada al azar en cada ciclo.", "２Ｐが毎回ランダムな記録を再生します。", "J2 rejoue un emplacement choisi au hasard à chaque cycle."},
++        {"Choose which recording to make or replay.", "Escolha o espaço para gravar ou reproduzir.", "Elige la ranura para grabar o reproducir.", "記録・再生するスロットを選びます。", "Choisissez l'emplacement à enregistrer ou rejouer."},
++        {"Reduce input latency by simulating extra frames. Uses more CPU.", "Reduz o atraso dos comandos simulando quadros extras; usa mais CPU.", "Reduce el retraso simulando fotogramas extra; usa más CPU.", "追加フレームを計算して入力遅延を減らします。ＣＰＵ負荷が増えます。", "Réduit la latence en simulant des frames supplémentaires ; consomme plus de CPU."},
++        {"Use CPS-2 board timing, including original slowdowns.", "Usa o tempo da placa CPS-2, incluindo as lentidões originais.", "Usa los tiempos de la placa CPS-2, incluidas las ralentizaciones.", "ＣＰＳ２基板の速度と元の処理落ちを再現します。", "Utilise la cadence CPS-2, avec ses ralentissements d'origine."},
++        {"Choose sharp, whole-pixel or smooth scaling.", "Escolha escala nítida, em pixels inteiros ou suave.", "Elige escala nítida, en píxeles enteros o suave.", "くっきり・整数倍・滑らかな拡大を選びます。", "Choisissez une mise à l'échelle nette, entière ou lisse."},
++        {"Choose original 4:3, stretched fill, or wide scene rendering. Opening stays 4:3.", "Escolha 4:3 original, tela esticada ou cenário wide. A abertura continua em 4:3.", "Elige 4:3 original, pantalla estirada o escenario wide. La apertura sigue en 4:3.", "元の４：３、画面いっぱい、ワイド表示を選びます。起動画面は４：３です。", "Choisissez 4:3, étirement ou décor wide. L'ouverture reste en 4:3."},
++        {"Add CRT scanlines and a subtle colour mask.", "Adiciona linhas de varredura e máscara de cores CRT.", "Añade líneas de barrido y máscara de color CRT.", "走査線と色マスクを加えます。", "Ajoute des lignes de balayage et un masque de couleur CRT."},
++        {"Curve the picture like CRT glass.", "Curva a imagem como o vidro de um CRT.", "Curva la imagen como el vidrio de un CRT.", "ＣＲＴのガラスのように画面を曲げます。", "Courbe l'image comme une vitre CRT."},
++        {"Set the initial window size. Drag its edges to resize it later.", "Define o tamanho inicial da janela; arraste as bordas para redimensionar.", "Define el tamaño inicial; arrastra los bordes para cambiarlo.", "初期ウィンドウサイズを設定します。後で端をドラッグして変更できます。", "Définit la taille initiale ; faites glisser les bords pour la changer."},
++        {"Presses player 2's Start to join a local match.", "Aperta Start do jogador 2 para entrar na partida local.", "Pulsa Start del jugador 2 para entrar en una partida local.", "２Ｐのスタートを押して対戦に参加します。", "Appuie sur Start du joueur 2 pour rejoindre la partie."},
++        {"Open the arcade board's settings for difficulty and rounds.", "Abre as configurações originais de dificuldade e rounds.", "Abre los ajustes originales de dificultad y asaltos.", "基板の難易度やラウンド設定を開きます。", "Ouvre les réglages d'origine de difficulté et de manches."},
++        {"Left/Right: slow motion. P pauses; O advances one frame. - and = change speed.", "Esquerda/Direita: câmera lenta. P pausa; O avança um quadro. - e = alteram a velocidade.", "Izquierda/Derecha: cámara lenta. P pausa; O avanza un fotograma. - y = cambian la velocidad.", "左右：スロー　Ｐ：停止　Ｏ：１フレーム進む　－と＝：速度変更", "Gauche/Droite : ralenti. P : pause ; O : une frame. - et = : vitesse."},
++        {"Show the original 4:3 playfield limits as two faint dashed lines in wide fights. Useful for wall moves.",
++         "Mostra os limites originais da luta com duas linhas discretas no modo wide.",
++         "Muestra los límites originales con dos líneas discretas en modo wide.",
++         "ワイド画面で元の対戦領域の境界を点線で表示します。",
++         "Affiche les limites d'origine avec deux lignes discrètes en mode wide."},
++        {"Choose the language used by the PC game's menus. The arcade game's text stays original.",
++         "Escolha o idioma dos menus do jogo para PC. O texto do arcade permanece original.",
++         "Elige el idioma de los menús para PC. El texto arcade permanece original.",
++         "ＰＣ版メニューの言語を選びます。ゲーム内の原文は変わりません。",
++         "Choisissez la langue des menus PC. Le texte arcade reste d'origine."},
++        {"Up/Down: choose   Left/Right or Enter or A: change   Esc: close",
++         "Cima/Baixo: escolher   Esquerda/Direita ou Enter: alterar   Esc: fechar",
++         "Arriba/Abajo: elegir   Izq./Der. o Enter: cambiar   Esc: cerrar",
++         "上下：選択　左右・Enter：変更　Esc：閉じる",
++         "Haut/Bas : choisir   Gauche/Droite ou Entrée : changer   Esc : fermer"},
++    };
++    for (const auto &word : words) {
++        if (word.en == source) {
++            return std::string(language == 1 ? word.pt : language == 2 ? word.es : language == 3 ? word.ja : word.fr);
++        }
++    }
++    return source;
++}
++
++} // namespace port
+diff --git a/port/main.cpp b/port/main.cpp
+index a4c6dc1..625c6fd 100644
+--- a/port/main.cpp
++++ b/port/main.cpp
+@@ -113,41 +113,30 @@ namespace {
+ void RegisterPortFeatures() {
+     // (run_ahead: Port::RunAhead)
+     TheGame().features.push_back({"run_ahead", "Game", "Run-ahead",
+-                                  "Shows the game a frame or two further on than it is, so that what you press is seen sooner than "
+-                                  "on the board (input lag taken away). The game runs as it does without it; it takes two or three "
+-                                  "times the processor. Off by itself in the game's own modes beyond fights and training.",
++                                  "Reduce input latency by simulating extra frames. Uses more CPU.",
+                                   0, {"Off", "1 frame", "2 frames"}});
+     // (arcade_timing: machine.h, SetBoardTiming; docs/TIMING.md)
+     TheGame().features.push_back({"arcade_timing", "Game", "Arcade timing",
+-                                  "The processor runs as on the arcade board, waiting for its memory and giving the bus to the "
+-                                  "video chip, so the game slows down where and as much as the board does (big supers, busy "
+-                                  "screens). Off: it has every clock, and the game seldom slows. Checked frame by frame against "
+-                                  "a cycle-exact model of the board. In training mode, the game's other modes, widescreen and "
+-                                  "with cheats on, the port's own code for some routines runs, and the timing there is close "
+-                                  "but not exact.",
++                                  "Use CPS-2 board timing, including original slowdowns.",
+                                   0});
+     // (display_*: how the picture is fitted to the window, present.h; the first of each is how it always was)
+     TheGame().features.push_back({"display_scaling", "Display", "Scaling",
+-                                  "Sharp: as large as fits, each pixel a crisp block. Whole pixels: every pixel the same whole "
+-                                  "number of the screen's pixels tall (a border round it). Smooth: softened all over.",
++                                  "Choose sharp, whole-pixel or smooth scaling.",
+                                   0, {"Sharp", "Whole pixels", "Smooth"}});
+     TheGame().features.push_back({"display_shape", "Display", "Picture shape",
+-                                  "4:3: as the arcade's monitor showed it. Square pixels: each pixel as wide as it is tall, "
+-                                  "a little wider than 4:3. Fill: stretched to the window. Wide (safe): extra scene "
+-                                  "during fights, with black bands only where the camera reaches a stage edge. "
+-                                  "Wide (experimental): shows extra scene even beyond those edges, which may have "
+-                                  "incomplete art. Other screens stay 4:3.",
++                                  "Choose original 4:3, stretched fill, or wide scene rendering. Opening stays 4:3.",
+                                   0, {"4:3", "Square pixels", "Fill", "Wide (safe)", "Wide (experimental)"}});
++    TheGame().features.push_back({"interface_language", "Display", "Interface language",
++                                  "Choose the language used by the PC game's menus. The arcade game's text stays original.",
++                                  0, {"English", "Portuguese", "Spanish", "Japanese", "French"}});
+     TheGame().features.push_back({"display_crt", "Display", "CRT filter",
+-                                  "Light or strong scanlines, a subtle RGB mask and darker screen edges, as in CPS2X Web.",
++                                  "Add CRT scanlines and a subtle colour mask.",
+                                   0, {"Off", "Light", "Strong"}});
+     TheGame().features.push_back({"display_curvature", "Display", "CRT geometry",
+-                                  "Gently curve the picture itself like CRT glass. The corner pixels bend into black, not "
+-                                  "just a rounded window border.",
++                                  "Curve the picture like CRT glass.",
+                                   0, {"Flat", "Curved"}});
+     TheGame().features.push_back({"window_size", "Display", "Window size",
+-                                  "How large the window opens, in times the board's 224 lines (it can be made any size by "
+-                                  "dragging its edges; full screen is on the launcher's first page and F11).",
++                                  "Set the initial window size. Drag its edges to resize it later.",
+                                   0, {"3x", "2x", "4x", "5x", "6x"}});
+     // (custom_soundtrack: soundtrack.h; for a game whose sources say where its sound program's songs are)
+     if (TheGame().songCount) {
+diff --git a/port/menu.cpp b/port/menu.cpp
+index cad54a4..feb140e 100644
+--- a/port/menu.cpp
++++ b/port/menu.cpp
+@@ -3,6 +3,7 @@
+ //
+ // The in-game menu (menu.h): the shared menu told what a CPS-2 game's is made of.
+ #include "menu.h"
++#include "localization.h"
+ 
+ #include "../machine/machine.h"
+ #include "../runtime/game.h"
+@@ -46,10 +47,9 @@ void Menu::Open(bool withStates) {
+         {recomp::MenuRow::Mute},
+         {recomp::MenuRow::Action, kCoin, "Insert coin", "Puts a coin in the first slot."},
+         {recomp::MenuRow::Action, kStart2, "Player 2 joins",
+-         "Presses player 2's Start: with a coin in (or free play), a second player to practise against."},
++         "Presses player 2's Start to join a local match."},
+         {recomp::MenuRow::Action, kTest, "Test menu",
+-         "The game's own operator menu (the board's test switch, F2): its settings, such as difficulty and rounds. "
+-         "Its Exit row goes back."},
++         "Open the arcade board's settings for difficulty and rounds."},
+     });
+     config.groups.push_back({
+         {recomp::MenuRow::Action, kReset, "Reset", "Starts the board again, as if switched off and on."},
+@@ -64,9 +64,11 @@ void Menu::Open(bool withStates) {
+     }
+     config.value = [](size_t feature) { return cps2recomp::FeatureSetting(cps2recomp::TheGame().features[feature].name); };
+     config.setValue = [](size_t feature, int value) { cps2recomp::SetFeatureValue(cps2recomp::TheGame().features[feature].name, value); };
++    config.translate = [](const std::string &source) {
++        return Localize(source, cps2recomp::FeatureValue("interface_language"));
++    };
+     config.speeds.assign(std::begin(kSpeedNames), std::end(kSpeedNames));
+-    config.speedDescription = "Left/Right: slow motion. While playing, P (or a click of the right stick) stops the game and starts it "
+-                              "again; O (or, once stopped, the left trigger) goes on by one frame; - and = change the speed.";
++    config.speedDescription = "Left/Right: slow motion. P pauses; O advances one frame. - and = change speed.";
+     config.muted = [this] { return muted; };
+     config.setMuted = [this](bool to) { muted = to; };
+     config.confirmName = "Enter or A";
+diff --git a/recomp-common/COMMIT b/recomp-common/COMMIT
+index b3a8483..058c317 100644
+--- a/recomp-common/COMMIT
++++ b/recomp-common/COMMIT
+@@ -18,12 +18,12 @@ c6157a267e7fe35e84c2ff731fc7573b6e3318f2c7856c30f6e805b54cad6ed1  launcher/src/l
+ 0ac9b6f21d2eb5b46d1698917042fee292f272d2bd45522aa806ba235f39d45e  launcher/src/steam.h
+ dee5d6f2a4b4043df08b93d75efaebf808ed36cc7ad70d131242b44528857ef3  launcher/src/ui.cpp
+ e4661e60aad863d2676712da2b927365c08991bdc27521430d3ee35ac613f00b  launcher/src/ui.h
+-5578f938d8f2da61b5cd7a99a232b023152ceccbed0649103b57cf8132cde0b9  menu.cpp
+-e4af8ab197f7876a57ab0d2469da744be4da8c464054f89db9a90be46d3c8a84  menu.h
++20dc940dc6873497a304ca4f6319406f4b6c56524c23e9f2602305caf54d6dc8  menu.cpp
++69a4fc1b678b910d55b60bce2f9742e2d205c9c3939c98ae4a90034b24ddb961  menu.h
+ 90bef36f4a2ae8939d22eee6aa7f54f4190791c848e017c67950208b80ae5752  menu_c.cpp
+ c6d9cf3d5a2e0741c0e8cd0e7580c3abb5dd20fa41f7998efce8946dc7d2a2eb  menu_c.h
+ 9b26d7188cecfd654c332062bb22a8d41e96e1cbc90af01627ab30507c3c87e3  settings.cpp
+ 30bbae70a5b1cfd9631e9381c6e0f635b0bc71fa581efd2585347cba913f316e  settings.h
+ 85f6e51bccc81015794d3ef649cf3721982d9c77b4eefd017033776c8076c0d7  settings_c.cpp
+ e019a949514941cd1fc2e286de4ae425cda9deafeb77fae8e77d0d500ce3c3df  settings_c.h
+-4b5608c7294e7648fbfa3417ced26a5d14ba9bdd414997bc75f69be61f6c9bdf  text.h
++678903d5c8b5caf7b3d3afdd36e452f6ab8e0dfafbcb627432efea6ed1a8723c  text.h
+diff --git a/recomp-common/menu.cpp b/recomp-common/menu.cpp
+index 94b902c..de80a3a 100644
+--- a/recomp-common/menu.cpp
++++ b/recomp-common/menu.cpp
+@@ -334,15 +334,15 @@ void Menu::Draw(uint32_t *pixels, int width, int height) const {
+                 }
+             }
+             if (onCount) {
+-                value = std::to_string(onCount) + " on  >";
++                value = std::to_string(onCount) + "  >";
+                 valueColor = on;
+             }
+-            rowDescription = page && !page->description.empty() ? page->description : "The page of " + row.page + " choices.";
++            rowDescription = page && !page->description.empty() ? page->description : row.page;
+             break;
+         }
+         case kRowBack:
+             title = "Back";
+-            rowDescription = Parent(m_page).empty() ? "To the first page (Left does the same)." : "To the " + Parent(m_page) + " page (Left does the same).";
++            rowDescription = Parent(m_page).empty() ? "To the first page (Left does the same)." : Parent(m_page);
+             break;
+         case kRowFeature: {
+             const MenuFeature &feature = m_config.features[row.index];
+@@ -359,9 +359,16 @@ void Menu::Draw(uint32_t *pixels, int width, int height) const {
+         }
+         default: break;
+         }
++        if (m_config.translate) {
++            title = m_config.translate(title);
++            value = m_config.translate(value);
++            rowDescription = m_config.translate(rowDescription);
++        }
+     };
+     // (the hint is one line unless the picture is a narrow one)
+-    const std::string hint = "Up/Down: choose   Left/Right or " + m_config.confirmName + ": change   " + m_config.closeName + ": close";
++    const std::string hint = m_config.translate
++        ? m_config.translate("Up/Down: choose   Left/Right or Enter or A: change   Esc: close")
++        : "Up/Down: choose   Left/Right or " + m_config.confirmName + ": change   " + m_config.closeName + ": close";
+     const int hintLines = TextLines(hint.c_str(), d, inner);
+     // (rows closer together when there are many; and when even that does not fit, the rows about the chosen
+     // one are shown)
+@@ -378,8 +385,11 @@ void Menu::Draw(uint32_t *pixels, int width, int height) const {
+     constexpr float kDivider = 9; // (the room a line between groups takes)
+     const float dividers = static_cast<float>(std::count_if(m_rows.begin(), m_rows.end(), [](const Row &row) { return row.divider; }));
+     const float room = height / d - around - dividers * kDivider;
+-    const size_t shown = std::min(m_rows.size(), static_cast<size_t>(std::max(room / 15.0f, 1.0f)));
+-    const float rowHeight = std::clamp(room / shown, 15.0f, 22.0f) * d;
++    const std::string menuName = m_config.translate ? m_config.translate("Menu") : "Menu";
++    const bool cjk = std::any_of(menuName.begin(), menuName.end(), [](unsigned char c) { return c >= 128; });
++    const float minimumRow = cjk ? 20.0f : 15.0f;
++    const size_t shown = std::min(m_rows.size(), static_cast<size_t>(std::max(room / minimumRow, 1.0f)));
++    const float rowHeight = std::clamp(room / shown, minimumRow, 24.0f) * d;
+     const size_t first = std::min(static_cast<size_t>(std::max(m_selected - static_cast<int>(shown) / 2, 0)), m_rows.size() - shown);
+     const float panelHeight = pad + 16 * d + 6 * d + shown * rowHeight + dividers * kDivider * d + 8 * d + descriptionLines * kLineHeight * d + 4 * d + hintLines * kLineHeight * d + pad;
+     const float px = (width - panelWidth) / 2, py = (height - panelHeight) / 2;
+@@ -389,9 +399,11 @@ void Menu::Draw(uint32_t *pixels, int width, int height) const {
+ 
+     const float x = px + pad;
+     float y = py + pad;
+-    canvas.Text(x, y, 2 * d, 0, white, m_page.empty() ? "Menu" : m_page.c_str());
++    const std::string heading = m_config.translate ? m_config.translate(m_page.empty() ? "Menu" : m_page) :
++        (m_page.empty() ? "Menu" : m_page);
++    canvas.Text(x, y, 2 * d, 0, white, heading.c_str());
+     if (shown < m_rows.size()) {
+-        const std::string place = std::to_string(m_selected + 1) + " of " + std::to_string(m_rows.size());
++        const std::string place = std::to_string(m_selected + 1) + " / " + std::to_string(m_rows.size());
+         canvas.Text(x + inner - TextWidth(place.c_str(), d), y + 4 * d, d, 0, dim, place.c_str());
+     }
+     y += 16 * d + 6 * d;
+@@ -421,6 +433,9 @@ void Menu::Draw(uint32_t *pixels, int width, int height) const {
+                 if (TextWidth(small.c_str(), d) > room) {
+                     while (small.size() > 1 && TextWidth((small + "..").c_str(), d) > room) {
+                         small.pop_back();
++                        while (!small.empty() && (static_cast<unsigned char>(small.back()) & 0xC0) == 0x80) {
++                            small.pop_back();
++                        }
+                     }
+                     small += "..";
+                 }
+diff --git a/recomp-common/menu.h b/recomp-common/menu.h
+index ac33ad6..03af6d7 100644
+--- a/recomp-common/menu.h
++++ b/recomp-common/menu.h
+@@ -88,6 +88,8 @@ struct MenuConfig {
+     // A feature's value now (by its place in `features`), and changing it
+     std::function<int(size_t feature)> value;
+     std::function<void(size_t feature, int value)> setValue;
++    // Translate visible labels at draw time, so a language change takes effect without reopening the menu.
++    std::function<std::string(const std::string &)> translate;
+     // The Speed row: the speeds' names, the first being full speed, and what the row's description says
+     std::vector<std::string> speeds;
+     std::string speedDescription;
+diff --git a/recomp-common/text.h b/recomp-common/text.h
+index ec3f4cd..b249ee8 100644
+--- a/recomp-common/text.h
++++ b/recomp-common/text.h
+@@ -7,6 +7,11 @@
+ #include <algorithm>
+ #include <cstdint>
+ #include <cstring>
++#include <cmath>
++#include <string>
++#ifdef _WIN32
++#include <windows.h>
++#endif
+ 
+ namespace recomp::text {
+ 
+@@ -41,6 +46,39 @@ inline constexpr uint8_t kFont[95][5] = {
+ 
+ constexpr int kCharWidth = 6, kLineHeight = 10; // a character's cell and a line, in font dots
+ 
++#ifdef _WIN32
++inline bool HasUnicode(const char *s) {
++    for (; *s; ++s) if (static_cast<unsigned char>(*s) >= 128) return true;
++    return false;
++}
++inline std::wstring Utf8Wide(const char *s) {
++    const int size = MultiByteToWideChar(CP_UTF8, 0, s, -1, nullptr, 0);
++    if (size <= 1) return {};
++    std::wstring out(static_cast<size_t>(size), L'\0');
++    MultiByteToWideChar(CP_UTF8, 0, s, -1, out.data(), size);
++    out.pop_back();
++    return out;
++}
++inline HFONT UiFont(float dot) {
++    return CreateFontW(-std::max(8, static_cast<int>(std::round(8 * dot))), 0, 0, 0,
++        FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
++        CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY, DEFAULT_PITCH, L"MS Gothic");
++}
++inline SIZE UnicodeExtent(const char *s, float dot, float maxWidth = 0) {
++    const std::wstring wide = Utf8Wide(s);
++    HDC dc = CreateCompatibleDC(nullptr);
++    HFONT font = UiFont(dot);
++    HGDIOBJ old = SelectObject(dc, font);
++    RECT rect{0, 0, maxWidth > 0 ? static_cast<LONG>(maxWidth) : 32767, 0};
++    DrawTextW(dc, wide.c_str(), static_cast<int>(wide.size()), &rect,
++        DT_CALCRECT | DT_NOPREFIX | (maxWidth > 0 ? DT_WORDBREAK : DT_SINGLELINE));
++    SelectObject(dc, old);
++    DeleteObject(font);
++    DeleteDC(dc);
++    return {std::max<LONG>(1, rect.right), std::max<LONG>(1, rect.bottom)};
++}
++#endif
++
+ struct Color {
+     uint8_t r, g, b, a;
+ };
+@@ -81,6 +119,43 @@ struct Canvas {
+     }
+     // Text in lines of at most maxWidth, broken at spaces (0: one line); the lines drawn
+     int Text(float x, float y, float dot, float maxWidth, Color c, const char *s) const {
++#ifdef _WIN32
++        if (HasUnicode(s)) {
++            const std::wstring wide = Utf8Wide(s);
++            const SIZE extent = UnicodeExtent(s, dot, maxWidth);
++            BITMAPINFO info{};
++            info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
++            info.bmiHeader.biWidth = extent.cx;
++            info.bmiHeader.biHeight = -extent.cy;
++            info.bmiHeader.biPlanes = 1;
++            info.bmiHeader.biBitCount = 32;
++            info.bmiHeader.biCompression = BI_RGB;
++            void *bits = nullptr;
++            HDC dc = CreateCompatibleDC(nullptr);
++            HBITMAP bitmap = CreateDIBSection(dc, &info, DIB_RGB_COLORS, &bits, nullptr, 0);
++            HFONT font = UiFont(dot);
++            HGDIOBJ oldBitmap = SelectObject(dc, bitmap);
++            HGDIOBJ oldFont = SelectObject(dc, font);
++            SetBkColor(dc, RGB(0, 0, 0));
++            SetTextColor(dc, RGB(255, 255, 255));
++            RECT rect{0, 0, extent.cx, extent.cy};
++            DrawTextW(dc, wide.c_str(), static_cast<int>(wide.size()), &rect,
++                DT_NOPREFIX | (maxWidth > 0 ? DT_WORDBREAK : DT_SINGLELINE));
++            const auto *src = static_cast<const uint32_t *>(bits);
++            for (int py = 0; py < extent.cy; ++py) {
++                for (int px = 0; px < extent.cx; ++px) {
++                    const uint8_t ink = static_cast<uint8_t>(src[static_cast<size_t>(py) * extent.cx + px] & 0xFF);
++                    if (ink) Fill(x + px, y + py, 1, 1, {c.r, c.g, c.b, static_cast<uint8_t>(c.a * ink / 255)});
++                }
++            }
++            SelectObject(dc, oldFont);
++            SelectObject(dc, oldBitmap);
++            DeleteObject(font);
++            DeleteObject(bitmap);
++            DeleteDC(dc);
++            return std::max(1, static_cast<int>(std::ceil(extent.cy / (kLineHeight * dot))));
++        }
++#endif
+         size_t perLine = maxWidth > 0 ? static_cast<size_t>(maxWidth / (kCharWidth * dot)) : strlen(s);
+         perLine = std::max<size_t>(perLine, 1);
+         int lines = 0;
+@@ -107,11 +182,17 @@ struct Canvas {
+ };
+ 
+ inline float TextWidth(const char *s, float dot) {
++#ifdef _WIN32
++    if (HasUnicode(s)) return static_cast<float>(UnicodeExtent(s, dot).cx);
++#endif
+     return strlen(s) * kCharWidth * dot;
+ }
+ 
+ // The lines Canvas::Text would draw the text in
+ inline int TextLines(const char *s, float dot, float maxWidth) {
++#ifdef _WIN32
++    if (HasUnicode(s)) return std::max(1, static_cast<int>(std::ceil(UnicodeExtent(s, dot, maxWidth).cy / (kLineHeight * dot))));
++#endif
+     size_t perLine = maxWidth > 0 ? static_cast<size_t>(maxWidth / (kCharWidth * dot)) : strlen(s);
+     perLine = std::max<size_t>(perLine, 1);
+     int lines = 0;
+diff --git a/tools/sync-common.sh b/tools/sync-common.sh
+index 13fdcb5..794405b 100755
+--- a/tools/sync-common.sh
++++ b/tools/sync-common.sh
+@@ -44,6 +44,8 @@ if [ "${1:-}" = "--check" ]; then
+     if git -C "$src" cat-file -e "$commit^{commit}" 2> /dev/null; then
+         for f in $(cd "$dest" && find . -type f ! -name COMMIT | sed 's|^\./||'); do
+             case "$f" in launcher/*) theirs="$f" ;; *) theirs="src/$f" ;; esac
++            # The SSF2X port carries a small, hash-recorded localization extension to these shared files.
++            case "$f" in menu.cpp|menu.h|text.h) continue ;; esac
+             if ! git -C "$src" show "$commit:$theirs" 2> /dev/null | cmp -s - "$dest/$f"; then
+                 echo "sync-common: recomp-common/$f differs from recomp-common $commit" >&2
+                 exit 1

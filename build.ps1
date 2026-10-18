@@ -22,7 +22,7 @@ $commit = (& git -C $toolkit rev-parse HEAD).Trim()
 if ($commit -ne 'fdd55ecbd20c9197c85ef526ecebd44879ced82e') {
     throw "O toolkit local usa outro commit: $commit"
 }
-foreach ($name in @('display-wide-crt.patch', 'fix-windows-rom-path.patch')) {
+foreach ($name in @('display-wide-crt.patch', 'fix-windows-rom-path.patch', 'interface-wall-wide.patch')) {
     $patch = Join-Path $root $name
     & git -C $toolkit apply --reverse --check $patch 2>$null
     if ($LASTEXITCODE -eq 0) { continue }
