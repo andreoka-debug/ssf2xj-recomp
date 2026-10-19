@@ -22,6 +22,7 @@ $sources = [ordered]@{
     'libiconv-2.dll' = Join-Path $runtime 'libiconv-2.dll'
     'LICENSE' = Join-Path $root 'LICENSE'
     'README.md' = Join-Path $root 'README.md'
+    'cps2x.ico' = Join-Path $root 'assets\cps2x.ico'
     'install.cmd' = Join-Path $root 'installer\install.cmd'
     'setup.ps1' = Join-Path $root 'installer\setup.ps1'
     'Uninstall.ps1' = Join-Path $root 'installer\Uninstall.ps1'
@@ -71,4 +72,5 @@ while ([DateTime]::UtcNow -lt $deadline) {
 if (-not (Test-Path -LiteralPath $OutputPath) -or $stable -lt 2) {
     throw 'Falha ao criar o instalador com IExpress.'
 }
+& (Join-Path $root 'installer\set-icon.ps1') -Executable $OutputPath -Icon (Join-Path $root 'assets\cps2x.ico')
 Write-Host "Instalador pronto: $OutputPath"

@@ -8,7 +8,7 @@ $files = @(
     'ssf2xj.exe', 'ssf2xj-launcher.exe',
     'SDL3.dll', 'libgcc_s_seh-1.dll', 'libstdc++-6.dll',
     'libwinpthread-1.dll', 'zlib1.dll', 'libiconv-2.dll',
-    'LICENSE', 'README.md', 'Uninstall.ps1'
+    'LICENSE', 'README.md', 'cps2x.ico', 'Uninstall.ps1'
 )
 foreach ($name in $files) {
     if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot $name))) {
@@ -27,6 +27,7 @@ $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut((Join-Path $startMenu 'Super Street Fighter II X.lnk'))
 $shortcut.TargetPath = Join-Path $Destination 'ssf2xj-launcher.exe'
 $shortcut.WorkingDirectory = $Destination
+$shortcut.IconLocation = Join-Path $Destination 'cps2x.ico'
 $shortcut.Description = 'Super Street Fighter II X Recomp'
 $shortcut.Save()
 

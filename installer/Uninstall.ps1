@@ -5,7 +5,7 @@ $names = @(
     'ssf2xj.exe', 'ssf2xj-launcher.exe',
     'SDL3.dll', 'libgcc_s_seh-1.dll', 'libstdc++-6.dll',
     'libwinpthread-1.dll', 'zlib1.dll', 'libiconv-2.dll',
-    'LICENSE', 'README.md', 'Uninstall.ps1'
+    'LICENSE', 'README.md', 'cps2x.ico', 'Uninstall.ps1'
 )
 foreach ($name in $names) {
     $path = Join-Path $destination $name
