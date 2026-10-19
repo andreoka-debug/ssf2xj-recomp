@@ -1,41 +1,51 @@
-# Super Street Fighter II X — recomp para PC (protótipo)
+# Super Street Fighter II X Recomp for PC (prototype)
 
-Porte experimental de **Super Street Fighter II X (Japan 940223)** para PC, montado sobre o toolkit [cps2recomp](https://github.com/tmcleroy/cps2recomp). Este repositório contém somente o código específico do porte, patches do toolkit, pontos de entrada para a tradução e filmes de teste. **Não contém ROMs, chave, EEPROM, programa traduzido, executável ou arquivos do CPS2X Web.** Cada pessoa compila localmente usando seus próprios conjuntos `ssf2xj.zip` e `ssf2t.zip`.
+An experimental PC port of **Super Street Fighter II X (Japan 940223)** built with [cps2recomp](https://github.com/tmcleroy/cps2recomp). This repository contains the port-specific source, toolkit patches, recompilation entry points, and test movies. **It does not contain ROMs, game keys, EEPROM files, or CPS2X Web files.** You need your own `ssf2xj.zip` and `ssf2t.zip` ROM sets to play.
 
-O foco atual é Windows. O protótipo oferece jogo local, filtros CRT e curvatura, modo Wide para os cenários e as telas de seleção, VS e resultado, e um modo de treino com seleção do P2, vida e medidor, histórico de inputs, dano, hitboxes, leitura de frames e gravação/reprodução do dummy em três slots. A tela inicial permanece em 4:3. O modo Wide expande a área renderizada sem alterar a câmera nem esticar os lutadores; algumas bordas dos cenários ainda têm limitações. Os números de frames são medidos por quadro apresentado e ainda precisam de validação em todas as velocidades.
+Windows is the current focus. The prototype supports local play, CRT and curvature filters, widescreen fight stages, and a training mode with P2 character selection, health and meter options, input history, damage readouts, hitboxes, frame data, and dummy recording/replay in three slots. Menus and other non-fight screens remain at 4:3. Widescreen renders extra stage area without stretching fighters or changing the gameplay camera; some stage edges still have graphical artifacts. Frame counts are measured in displayed frames and have not been validated at every game speed.
 
-## Créditos e relação com o projeto original
+## Download and install
 
-O toolkit [cps2recomp](https://github.com/tmcleroy/cps2recomp), de **Tommy McLeroy**, faz a tradução estática e fornece a execução CPS-2, o áudio, a interface e os componentes compartilhados do treino. O projeto [Vampire Savior Recomp](https://github.com/tmcleroy/vampire-savior-recomp) do mesmo autor foi a referência para o fluxo do modo de treino e seus recursos. O visualizador de hitboxes de [pof/ssf2xj](https://github.com/poliva/ssf2xj/blob/master/lua/pof-ssf2x-training2020.lua), baseado no trabalho de Dammit, MZ e Felineki, orientou a leitura das tabelas de colisão do SSF2X.
+Download `SSF2X-Recomp-Setup.exe` from the [Releases page](https://github.com/andreoka-debug/ssf2xj-recomp/releases). The installer includes the launcher and required runtime libraries, but **no ROMs**. It installs for the current Windows user in `%LOCALAPPDATA%\Programs\SSF2X Recomp`, adds a Start menu shortcut, and opens the launcher when installation finishes. Select your own ROM ZIP files in the launcher. You do not need MSYS2 to run the installed program. Uninstall through **Installed apps**; your local ROMs and preferences are kept.
 
-Este é um **porte complementar**, não uma cópia completa nem uma versão oficial dos projetos acima. `ssf2xj/src/` contém a integração específica do SSF2X; os arquivos `.patch` contêm as alterações necessárias no toolkit. O código é distribuído sob GPL-3.0, compatível com o [toolkit original](https://github.com/tmcleroy/cps2recomp/blob/main/LICENSE). Capcom e os demais titulares mantêm os direitos sobre o jogo e seus dados.
+## Credits and relationship to upstream
 
-## Compilar no Windows
+Tommy McLeroy's [cps2recomp](https://github.com/tmcleroy/cps2recomp) toolkit provides static recompilation, CPS-2 emulation, audio, the user interface, and shared training components. His [Vampire Savior Recomp](https://github.com/tmcleroy/vampire-savior-recomp) was the reference for the training workflow and features. The hitbox viewer from [pof/ssf2xj](https://github.com/poliva/ssf2xj/blob/master/lua/pof-ssf2x-training2020.lua), based on work by Dammit, MZ, and Felineki, guided the SSF2X collision-table implementation.
 
-Instale Git, PowerShell 7 ou Windows PowerShell, e [MSYS2 UCRT64](https://www.msys2.org/) com as dependências de compilação do `cps2recomp` (CMake, Ninja, Python, compilador C/C++, Make e SDL3). Coloque `ssf2xj.zip` e `ssf2t.zip` na mesma pasta. Depois execute, na raiz deste repositório:
+This is a complementary port, not an official version of those projects. `ssf2xj/src/` contains the SSF2X-specific integration; the `.patch` files contain the necessary toolkit changes. Source code is released under GPL-3.0, consistent with the [upstream toolkit license](https://github.com/tmcleroy/cps2recomp/blob/main/LICENSE). Capcom and other rights holders retain their rights to the game and its data.
 
-```powershell
-./build.ps1 -RomPath 'C:\caminho\das\roms\ssf2xj.zip'
-```
+## Build on Windows
 
-O script baixa o `cps2recomp` no commit `fdd55ecbd20c9197c85ef526ecebd44879ced82e`, aplica os patches, copia os fontes e os pontos de entrada e compila o jogo e seu launcher. Tudo o que for gerado fica em `_build/`, ignorado pelo Git. Na primeira compilação, a tradução a partir das ROMs pode demorar. O script também aceita `-MsysRoot` se o MSYS2 estiver em outro local.
-
-Para jogar, abra `play.cmd` sem argumentos. O launcher permite escolher as ROMs e configurar os controles antes de iniciar. Se os dois ZIPs estiverem em `roms/`, a ROM principal já aparece selecionada. Para iniciar diretamente sem o launcher, passe o caminho da ROM:
+Install Git, PowerShell 7 or Windows PowerShell, and [MSYS2 UCRT64](https://www.msys2.org/) with the build dependencies for `cps2recomp` (CMake, Ninja, Python, a C/C++ compiler, Make, and SDL3). Put `ssf2xj.zip` and `ssf2t.zip` in the same folder. From the repository root, run:
 
 ```powershell
-./play.ps1 -RomPath 'C:\caminho\das\roms\ssf2xj.zip'
+./build.ps1 -RomPath 'C:\path\to\roms\ssf2xj.zip'
 ```
 
-Depois de compilar, crie o instalador do Windows com `./package-windows.ps1`. O arquivo gerado fica em `dist/SSF2X-Recomp-Setup.exe`. Ele usa o IExpress incluído no Windows e o ícone do projeto, instala o programa para o usuário atual em `%LOCALAPPDATA%\Programs\SSF2X Recomp`, cria um atalho no menu Iniciar e abre o launcher ao terminar. Não é preciso instalar o MSYS2 para executar o programa instalado. O instalador não contém ROMs: escolha seus ZIPs no launcher. A desinstalação fica em **Aplicativos instalados** e conserva ROMs e preferências locais.
+The script checks out `cps2recomp` at commit `fdd55ecbd20c9197c85ef526ecebd44879ced82e`, applies the patches, copies the game sources and entry points, then builds the game and launcher. Generated files stay under `_build/`, which Git ignores. The first recompilation may take a while. Use `-MsysRoot` if MSYS2 is installed elsewhere.
 
-As preferências e o EEPROM criado localmente ficam em `userdata/`, também ignorado pelo Git. O menu do jogo abre com `Esc` ou `F1`. Escolha inglês, português, espanhol, japonês ou francês no campo **Idioma** do launcher ou em **Display → Interface language** no jogo: ambos usam a mesma preferência salva. Isso traduz as interfaces do porte para PC; o texto original do arcade permanece como foi produzido pelo jogo. O japonês usa uma fonte do Windows, sem incluir arquivos de fonte no repositório. Em **Display → Wall helper**, ligue as linhas que marcam as bordas da área jogável original quando estiver em Wide. Em **Alternative modes → Training mode**, escolha o personagem do P2, inclusive **Gouki (Akuma)**, e clique em **Start**; use **Hitboxes**, **Frame data** e **Frame meter** conforme desejar. Na tela de seleção, com o cursor sobre **Ryu**, segure **cima + soco forte + chute forte** para escolher Gouki rapidamente. Na seção **Dummy**, selecione o slot, ative **Record** (P1 passa a controlar P2) e depois **Replay**. **Start over** reinicia o round sem apagar as gravações.
+Run `play.cmd` without arguments to open the launcher, choose the ROM sets, and configure controls. If both ZIP files are in `roms/`, the main ROM is preselected. To start the game directly:
 
-Para usar músicas próprias, selecione uma pasta em **Trilha sonora personalizada** na página **Jogo** do launcher e ative **Custom soundtrack** em **Recursos** (ou no menu do jogo). Arquivos MP3, OGG, FLAC e WAV sem nomes específicos tocam como uma lista de reprodução. O jogo cria `songs.txt` na pasta: se quiser substituir uma faixa específica, use o número de música indicado nesse arquivo como nome do arquivo de áudio, por exemplo `07.mp3`. A opção **On, shuffled** embaralha a lista. Efeitos sonoros e vozes continuam vindo do jogo.
+```powershell
+./play.ps1 -RomPath 'C:\path\to\roms\ssf2xj.zip'
+```
 
-Para trocar apenas as músicas de luta dos personagens, copie [o exemplo de `soundtrack.ini`](examples/soundtrack-personagens.ini) para a pasta escolhida no launcher, renomeie-o para `soundtrack.ini` e coloque nessa pasta seus arquivos `Ryu.mp3`, `Ryu-Perigo.mp3`, `Ken.mp3`, `Ken-Perigo.mp3` etc. Cada personagem tem uma faixa normal e outra de perigo; o jogo chama códigos diferentes quando troca a música durante a luta. Os códigos normais foram conferidos durante partidas de treino nos 16 cenários, e a tabela das versões de perigo foi conferida no programa do jogo. As faixas não incluídas continuam originais. `songs.txt` é uma referência criada automaticamente pelo jogo; edições nele são sobrescritas.
+After building, run `./package-windows.ps1` to create `dist/SSF2X-Recomp-Setup.exe`. It uses the IExpress tool included with Windows and the project's icon. ROMs are never packaged.
 
-## Testes e integração
+## Options and training
 
-Com as ROMs locais, o porte foi compilado do zero no Windows e passou nas verificações de equivalência entre código traduzido e interpretador e de repetibilidade do `cps2recomp`. Um teste automatizado confirmou a troca de REC para PLAY e a reprodução idêntica após salvar e carregar o estado. Ainda faltam testes manuais abrangentes para cada cenário e golpe.
+Preferences and the locally generated EEPROM are stored in `userdata/`, which Git ignores. Open the in-game menu with `Esc` or `F1`. Choose English, Portuguese, Spanish, Japanese, or French in the launcher's **Language** field or in **Display → Interface language** in the game; both use the same saved setting. This translates the PC port's interface, while the arcade game's original text stays as it was. Japanese uses a Windows font; no font files are bundled.
 
-Para integrar este porte ao toolkit, aplique os quatro arquivos `.patch` na ordem usada por `build.ps1` sobre o commit indicado, copie `ssf2xj/` para `games/ssf2xj/` e `entries/entries.txt*` para `work/ssf2xj/`. Os pontos de entrada são endereços, não bytes da ROM. `build.ps1` automatiza exatamente esses passos.
+In **Display → Wall helper**, enable lines marking the original playable area's boundaries while using widescreen. In **Alternative modes → Training mode**, choose the P2 character, including **Gouki (Akuma)**, and select **Start**. Enable **Hitboxes**, **Frame data**, or **Frame meter** as needed. On the character select screen, hold **up + heavy punch + heavy kick** with the cursor over **Ryu** to select Gouki quickly. In the **Dummy** section, choose a slot, enable **Record** (P1 controls P2), then enable **Replay**. **Start over** restarts the round without deleting recordings.
+
+## Custom music
+
+Choose a folder under **Custom soundtrack** on the launcher's **Game** page and enable **Custom soundtrack** under **Features** (or in the in-game menu). MP3, OGG, FLAC, and WAV files without special names play as a playlist. The game creates `songs.txt` in the folder. To replace a particular track, name an audio file after its song number, for example `07.mp3`. **On, shuffled** randomizes the playlist. Sound effects and voices still come from the game.
+
+To replace only character fight themes, copy the [example `soundtrack.ini`](examples/soundtrack-personagens.ini) into the selected folder, rename it to `soundtrack.ini`, and add files such as `Ryu.mp3`, `Ryu-Perigo.mp3`, `Ken.mp3`, and `Ken-Perigo.mp3`. Each character has a normal theme and a faster danger theme; the game requests different song codes when it changes music during a fight. Normal codes were checked in training matches on all 16 stages, and the danger codes were checked against the game program. Tracks you do not provide continue to use the original music. `songs.txt` is generated for reference; changes to it are overwritten.
+
+## Testing and upstream integration
+
+Using local ROM sets, the port built from scratch on Windows and passed the `cps2recomp` checks for translated-versus-interpreted equivalence and repeatability. An automated test confirmed the REC-to-PLAY transition and identical dummy playback after save/load. Comprehensive manual testing across every stage and move is still outstanding.
+
+To integrate this port into the toolkit, apply the four `.patch` files in the order used by `build.ps1` to the pinned toolkit commit, copy `ssf2xj/` to `games/ssf2xj/`, and copy `entries/entries.txt*` to `work/ssf2xj/`. The entry points are addresses, not ROM bytes. `build.ps1` automates these steps.
