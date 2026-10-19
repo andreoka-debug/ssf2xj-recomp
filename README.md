@@ -30,9 +30,13 @@ Run `play.cmd` without arguments to open the launcher, choose the ROM sets, and 
 ./play.ps1 -RomPath 'C:\path\to\roms\ssf2xj.zip'
 ```
 
+In the launcher's **Controllers** page, assign **3 punches** (LP + MP + HP) and **3 kicks** (LK + MK + HK) to a keyboard key, gamepad button, or trigger for either player. These optional shortcuts start unassigned and press all three attacks together while held. Existing individual attack bindings remain available.
+
 After building, run `./package-windows.ps1` to create `dist/SSF2X-Recomp-Setup.exe`. It uses the IExpress tool included with Windows and the project's icon. ROMs are never packaged.
 
 ## Options and training
+
+An experimental **Windows-to-Windows match synchronization** layer is available for local tests. See [native synchronization](netplay/README.md) for the host/join helper, protocol, tests and current limits. It is not connected to the web lobby yet.
 
 Preferences and the locally generated EEPROM are stored in `userdata/`, which Git ignores. Open the in-game menu with `Esc` or `F1`. Choose English, Portuguese, Spanish, Japanese, or French in the launcher's **Language** field or in **Display → Interface language** in the game; both use the same saved setting. This translates the PC port's interface, while the arcade game's original text stays as it was. Japanese uses a Windows font; no font files are bundled.
 
@@ -48,4 +52,4 @@ To replace only character fight themes, copy the [example `soundtrack.ini`](exam
 
 Using local ROM sets, the port built from scratch on Windows and passed the `cps2recomp` checks for translated-versus-interpreted equivalence and repeatability. An automated test confirmed the REC-to-PLAY transition and identical dummy playback after save/load. Comprehensive manual testing across every stage and move is still outstanding.
 
-To integrate this port into the toolkit, apply the four `.patch` files in the order used by `build.ps1` to the pinned toolkit commit, copy `ssf2xj/` to `games/ssf2xj/`, and copy `entries/entries.txt*` to `work/ssf2xj/`. The entry points are addresses, not ROM bytes. `build.ps1` automates these steps.
+To integrate this port into the toolkit, apply the `.patch` files listed by `build.ps1` in that order to the pinned toolkit commit, copy `ssf2xj/` to `games/ssf2xj/`, copy the three native synchronization sources from `netplay/` to `port/`, and copy `entries/entries.txt*` to `work/ssf2xj/`. The entry points are addresses, not ROM bytes. `build.ps1` automates these steps.

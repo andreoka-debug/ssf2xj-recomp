@@ -47,21 +47,33 @@ void RegisterGame() {
         machine.video.wide.side = shape >= 3 && fightState ? Video::kMaxSide : 0;
         machine.video.wide.guardStageEdges = shape == 3 && fightState && machine.ram[0x8c4f] != 0x0f;
         machine.video.wide.fadeMenuSides = false;
-        // Traced in multiple stages: scroll 2 moves from 0 at the left limit to 384 at the right.
-        machine.video.wide.maxStageScrollX = 384;
         const bool cammyStage = machine.ram[0x8c4f] == 0x0c;
         const bool deeJayStage = machine.ram[0x8c4f] == 0x0f;
+        const bool hondaStage = machine.ram[0x8c4f] == 0x01;
+        // The bathhouse's scroll-3 art moves more slowly than its scroll-2
+        // floor (traced bounds: 265..502 versus 0..384). Guarding it with the
+        // floor exposes unfinished side strips before the wall art reaches them.
+        machine.video.wide.stageEdgeScroll = hondaStage ? 2 : 1;
+        machine.video.wide.stageEdgeOriginX = hondaStage ? 265 : 0;
+        machine.video.wide.maxStageScrollX = hondaStage ? 237 : 384;
+        machine.video.wide.stageEdgeStep = hondaStage ? 8 : 1;
         machine.video.wide.squareBlackEdges = shape == 3 && fightState && cammyStage;
-        machine.video.wide.fillHoles = shape == 4 && fightState;
-        machine.video.wide.fillSideHoles = shape == 3 && fightState && !cammyStage && !deeJayStage;
+        // Honda's animated bathhouse leaves changing transparent runs in the
+        // extra columns. Per-line hole mirroring switches on/off as those runs
+        // cross its width/side thresholds, making patches of the sides flash.
+        machine.video.wide.fillHoles = shape == 4 && fightState && !hondaStage;
+        machine.video.wide.fillSideHoles = shape == 3 && fightState && !cammyStage && !deeJayStage && !hondaStage;
         // Keep the original stage pixels in the extra columns; edge effects
         // such as mirroring or blurring look worse on Dee Jay's moving backdrop.
         machine.video.wide.blankSideBackground = false;
         // A Super Combo knockout paints its burst across the full raster in scroll 3, but
-        // stage scrolls obscure the extra columns. FF8462/FF8862 are remaining life;
+        // stage scrolls obscure the extra columns. Current life is the signed
+        // word at player + 0x78 (0xFFFF on KO); +0x7A is the delayed damage
+        // readout and can still hold the pre-hit value during the burst.
+        // The old byte at +0x62 is normally zero even while a fighter is healthy.
         // FinishPicture also checks for the burst so ordinary KO frames keep their stage.
         machine.video.wide.extendSuperFinish = shape == 3 && state == 10 &&
-            (machine.ram[0x8462] == 0 || machine.ram[0x8862] == 0);
+            (static_cast<int16_t>(Ram16(0xFF8478)) <= 0 || static_cast<int16_t>(Ram16(0xFF8878)) <= 0);
         // Cammy's castle leaves stale scroll tiles beyond the original 384 columns.
         // FF8C4F holds the selected stage (0x0C = Cammy); preserve wide objects
         // while mirroring only the castle background in the extra side columns.

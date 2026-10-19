@@ -35,7 +35,7 @@ if ($env:SSF2X_RECOMP_TEST_MODE -ne '1') {
     $registry = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\SSF2XRecomp'
     New-Item -Path $registry -Force | Out-Null
     New-ItemProperty -Path $registry -Name DisplayName -Value 'Super Street Fighter II X Recomp' -PropertyType String -Force | Out-Null
-    New-ItemProperty -Path $registry -Name DisplayVersion -Value '0.1' -PropertyType String -Force | Out-Null
+    New-ItemProperty -Path $registry -Name DisplayVersion -Value '0.1.1' -PropertyType String -Force | Out-Null
     New-ItemProperty -Path $registry -Name Publisher -Value 'SSF2X Recomp community project' -PropertyType String -Force | Out-Null
     New-ItemProperty -Path $registry -Name InstallLocation -Value $Destination -PropertyType String -Force | Out-Null
     $uninstall = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $Destination 'Uninstall.ps1') + '"'

@@ -26,7 +26,10 @@ $patches = @(
     @{ Name = 'display-wide-crt.patch'; Marker = 'machine/machine.cpp' },
     @{ Name = 'fix-windows-rom-path.patch'; Marker = 'machine/romset.cpp' },
     @{ Name = 'interface-wall-wide.patch'; Marker = 'recomp-common/text.h' },
-    @{ Name = 'launcher-language.patch'; Marker = 'recomp-common/launcher/src/ui.cpp' }
+    @{ Name = 'launcher-language.patch'; Marker = 'recomp-common/launcher/src/ui.h' },
+    @{ Name = 'triple-input-bindings.patch'; Marker = 'port/bindings.h' },
+    @{ Name = 'native-netplay.patch'; Marker = 'port/port.h' },
+    @{ Name = 'honda-wide-edges.patch'; Marker = 'video/video.h' }
 )
 foreach ($item in $patches) {
     $name = $item.Name
@@ -38,6 +41,9 @@ foreach ($item in $patches) {
     if ($LASTEXITCODE -ne 0) { throw "O patch $name não se aplica à versão do toolkit." }
     & git -C $toolkit apply --ignore-whitespace $patch
     if ($LASTEXITCODE -ne 0) { throw "Falha ao aplicar $name." }
+}
+foreach ($name in @('native_netplay.h', 'native_netplay.cpp', 'native_port.cpp')) {
+    Copy-Item -LiteralPath (Join-Path $root "netplay\$name") -Destination (Join-Path $toolkit "port\$name") -Force
 }
 $game = Join-Path $toolkit 'games\ssf2xj'
 New-Item -ItemType Directory -Path $game -Force | Out-Null

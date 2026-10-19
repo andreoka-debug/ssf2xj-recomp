@@ -1,0 +1,34 @@
+--- a/video/video.h
++++ b/video/video.h
+@@ -104,6 +104,10 @@
+         // The game's scroll-2 register provides the camera position; maxStageScrollX is game-specific.
+         bool guardStageEdges = false;
+         int maxStageScrollX = 0;
++        // Some stages use a slower parallax layer to define their painted edges.
++        int stageEdgeScroll = 1; // 0..2; normally the scroll-2 playfield
++        int stageEdgeOriginX = 0;
++        int stageEdgeStep = 1; // outward alignment, restricted to the extra columns
+         bool squareBlackEdges = false;
+         // During a Super Combo KO, the radial burst is already drawn by scroll 3 across the full raster,
+         // but stage scrolls cover it in the extra columns. Reveal the burst there after rendering.
+--- a/video/video.cpp
++++ b/video/video.cpp
+@@ -487,9 +487,15 @@
+         }
+     }
+     if (kWide && wide.guardStageEdges && wide.side > 0) {
+-        const int cameraX = m_src.cpsA[kScroll1X + 2]; // scroll 2: the stage's camera position
+-        const int left = std::clamp(wide.side - cameraX, 0, wide.side);
+-        const int right = std::clamp(wide.side - (wide.maxStageScrollX - cameraX), 0, wide.side);
++        const int layer = std::clamp(wide.stageEdgeScroll, 0, 2);
++        const int cameraX = m_src.cpsA[kScroll1X + layer * 2] - wide.stageEdgeOriginX;
++        const int step = std::clamp(wide.stageEdgeStep, 1, wide.side);
++        auto edge = [&](int distance) {
++            const int clipped = std::clamp(distance, 0, wide.side);
++            return std::min(wide.side, ((clipped + step - 1) / step) * step);
++        };
++        const int left = edge(wide.side - cameraX);
++        const int right = edge(wide.side - (wide.maxStageScrollX - cameraX));
+         for (int x = 0; x < left; x++) {
+             out[x] = 0;
+         }

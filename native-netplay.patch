@@ -1,0 +1,210 @@
+--- a/port/port.h
++++ b/port/port.h
+@@ -6,6 +6,7 @@
+ 
+ #include "../machine/machine.h"
+ #include "menu.h"
++#include "native_netplay.h"
+ #include "present.h"
+ #include "soundtrack.h"
+ 
+@@ -19,6 +20,8 @@
+ namespace port {
+ 
+ struct Options {
++    std::string netHost, netJoin, netLog; // experimental native synchronization
++    unsigned netTimeout = 30000;
+     std::string romPath = "rom";
+     std::string eepromPath;    // the board's settings memory (created when missing)
+     std::string moviePlay;     // input movie to replay
+@@ -70,6 +73,13 @@
+ 
+ struct Port {
+     Options opt;
++    std::unique_ptr<NetSession> netplay;
++    std::string netError;
++    uint32_t netHash = 0;
++    bool InitNetplay(std::string &error);
++    bool NetTick();
++    bool EndNetplay();
++    uint32_t NetHash() const;
+     cps2recomp::RomSet roms;
+     std::unique_ptr<cps2recomp::Machine> machine;
+     uint64_t frame = 0;       // frames run
+--- a/port/main.cpp
++++ b/port/main.cpp
+@@ -232,7 +232,7 @@
+     }
+     SoundtrackFollow();
+     machine->SetBoardTiming(FeatureOn("arcade_timing"));
+-    return true;
++    return InitNetplay(error);
+ }
+ 
+ // The custom soundtrack's folder: the one the launcher chose, or "soundtrack" beside settings.ini
+@@ -329,6 +329,7 @@
+ }
+ 
+ void Port::MenuAct(Menu::Action action) {
++    if (netplay) return;
+     std::string error;
+     const std::string path = StatePath(menu.Slot());
+     switch (action) {
+@@ -376,6 +377,7 @@
+ }
+ 
+ void Port::RunCommand(size_t index) {
++    if (netplay) return;
+     const auto &commands = TheGame().commands;
+     if (index < commands.size() && commands[index].run) {
+         commands[index].run(*machine);
+@@ -383,6 +385,7 @@
+ }
+ 
+ void Port::Key(char key, unsigned n) {
++    if (netplay) return;
+     switch (key) {
+     case 'p':
+         paused = !paused;
+@@ -408,6 +411,7 @@
+ }
+ 
+ bool Port::Tick() {
++    if (netplay) return NetTick();
+     // (tests: --keys TICK:KEY,...: keys pressed at those ticks; a digit after 'k' is the command key's number)
+     for (size_t at = 0; at < opt.keys.size();) {
+         const size_t colon = opt.keys.find(':', at);
+@@ -501,6 +505,7 @@
+ }
+ 
+ bool Port::SaveState(const std::string &path, std::string &error) {
++    if (netplay) { error = "Local save states are unavailable during netplay"; return false; }
+     std::vector<uint8_t> data;
+     Archive ar(data, true);
+     ar.Mark(0x43505332);
+@@ -518,6 +523,7 @@
+ }
+ 
+ bool Port::LoadState(const std::string &path, std::string &error) {
++    if (netplay) { error = "Local save states are unavailable during netplay"; return false; }
+     std::vector<uint8_t> data;
+     if (!ReadFile(path, data)) {
+         error = "cannot read " + path;
+@@ -776,7 +782,7 @@
+     ClearSpareRan();
+     SoundtrackFollow();
+     machine->SetBoardTiming(FeatureOn("arcade_timing"));
+-    if (!opt.moviePlay.empty()) {
++    if (!netplay && !opt.moviePlay.empty()) {
+         auto it = playMovie.changes.find(frame);
+         if (it != playMovie.changes.end()) {
+             pad[0] = it->second.first;
+@@ -929,7 +935,7 @@
+     if (!opt.movieRecord.empty()) {
+         recMovie.Save(opt.movieRecord);
+     }
+-    if (!opt.eepromPath.empty() && machine->eeprom.changed) {
++    if (!netplay && !opt.eepromPath.empty() && machine->eeprom.changed) {
+         WriteFile(opt.eepromPath, machine->eeprom.words, sizeof(machine->eeprom.words));
+     }
+     if (!opt.recordEntries.empty()) {
+@@ -983,6 +989,10 @@
+             "                         some made-up way, and the other commands (with --sound check)\n"
+             "  --scale N              window size, times 224 lines (else the Display page's)\n"
+             "  --fullscreen  --mute  --unthrottled\n"
++            "  --net-host IP:PORT    native sync host (P1), e.g. 127.0.0.1:27888\n"
++            "  --net-join IP:PORT    native sync client (P2); uses local P1 controls\n"
++            "  --net-timeout MS      peer progress timeout (100..60000, default 30000)\n"
++            "  --net-log FILE        synchronization diagnostics\n"
+             "  --headless             no window, no sound, as fast as it goes\n"
+             "  --frames N             stop after N frames\n"
+             "  --shot-every N:PFX     write PFX<frame>.png every N frames\n"
+@@ -1026,7 +1036,17 @@
+     for (int i = 1; i < argc; i++) {
+         const std::string a = argv[i];
+         auto next = [&]() -> const char * { return i + 1 < argc ? argv[++i] : ""; };
+-        if (a == "--rom") {
++        if (a == "--net-host") {
++            o.netHost = next(); if (o.netHost.empty()) return false;
++        } else if (a == "--net-join") {
++            o.netJoin = next(); if (o.netJoin.empty()) return false;
++        } else if (a == "--net-timeout") {
++            const std::string v = next();
++            if (v.empty() || v.size() > 5 || v.find_first_not_of("0123456789") != std::string::npos) return false;
++            o.netTimeout = static_cast<unsigned>(strtoul(v.c_str(), nullptr, 10));
++        } else if (a == "--net-log") {
++            o.netLog = next();
++        } else if (a == "--rom") {
+             o.romPath = next();
+         } else if (a == "--eeprom") {
+             o.eepromPath = next();
+@@ -1254,6 +1274,7 @@
+         int musicRate = 0;
+         while (!p.quit && (p.opt.frames == 0 || p.frame < p.opt.frames)) {
+             if (!p.Tick()) {
++                if (p.netplay) SDL_Delay(1);
+                 continue;
+             }
+             if (!p.opt.audioDump.empty()) {
+@@ -1336,6 +1357,11 @@
+                 static_cast<unsigned long long>(BlocksChecked()), static_cast<unsigned long long>(Z80BlocksChecked()));
+ #endif
+     }
++    if (!p.EndNetplay()) result = 5;
++    if (!p.netError.empty()) {
++        if (!p.opt.headless) SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Netplay", p.netError.c_str(), nullptr);
++        result = 5;
++    }
+     p.Finish();
+     if (p.opt.checkRewrites && !ReportRewrites()) {
+         return 4;
+--- a/port/frontend_sdl.cpp
++++ b/port/frontend_sdl.cpp
+@@ -167,6 +167,7 @@
+     int triggerHeld = 0;
+     bool bothHeld = false; // a gamepad's Start and Select (Back) together: the menu
+     auto toggleMenu = [&]() {
++        if (port.netplay) { port.quit = true; return; }
+         if (port.menu.IsOpen()) {
+             port.menu.Close();
+         } else {
+@@ -176,6 +177,7 @@
+         }
+     };
+     auto quickState = [&](bool save) {
++        if (port.netplay) return;
+         std::string error;
+         const std::string path = port.StatePath(port.menu.Slot());
+         if (!(save ? port.SaveState(path, error) : port.LoadState(path, error))) {
+@@ -367,6 +369,11 @@
+ 
+         const int slowBy = port.paused ? 1 : port.menu.SlowBy();
+         const bool ran = port.Tick();
++        if (port.netplay) {
++            const std::string status = std::string(title) + " | P" + std::to_string(port.netplay->Player() + 1) + " | " + port.netplay->Status() + " | frame " + std::to_string(port.frame) + " | Esc: leave";
++            SDL_SetWindowTitle(window, status.c_str());
++            if (!ran) { SDL_Delay(1); nextFrame = SDL_GetTicksNS(); continue; }
++        }
+ 
+         if (audio && silent != (port.menu.muted || audioLog)) {
+             silent = port.menu.muted || audioLog;
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -58,7 +58,7 @@
+     set(GAME_SOURCES runtime/no_game.cpp)
+ endif ()
+ # (recomp-common/: the code the recomp ports share, a copy of recomp-common's; tools/sync-common.sh)
+-set(PORT_SOURCES port/main.cpp port/frontend_sdl.cpp port/present.cpp port/menu.cpp port/hud.cpp port/soundtrack.cpp port/decoders.cpp recomp-common/menu.cpp recomp-common/settings.cpp runtime/game.cpp runtime/board.cpp runtime/spare.cpp fight/frames.cpp fight/training.cpp fight/colours.cpp fight/colour_editor.cpp ${GAME_SOURCES})
++set(PORT_SOURCES port/native_netplay.cpp port/native_port.cpp port/main.cpp port/frontend_sdl.cpp port/present.cpp port/menu.cpp port/hud.cpp port/soundtrack.cpp port/decoders.cpp recomp-common/menu.cpp recomp-common/settings.cpp runtime/game.cpp runtime/board.cpp runtime/spare.cpp fight/frames.cpp fight/training.cpp fight/colours.cpp fight/colour_editor.cpp ${GAME_SOURCES})
+ 
+ # (the sound files' decoders, third_party/, are other projects' code, compiled as they are)
+ set_source_files_properties(port/decoders.cpp PROPERTIES COMPILE_OPTIONS "-w")
+@@ -78,7 +78,7 @@
+     target_include_directories(${target} PRIVATE runtime port machine fight "${WORK_DIR}/gen" "${GAME_DIR}")
+     target_link_libraries(${target} PRIVATE SDL3::SDL3 ZLIB::ZLIB)
+     if (WIN32)
+-        target_link_libraries(${target} PRIVATE gdi32)
++        target_link_libraries(${target} PRIVATE gdi32 ws2_32 bcrypt)
+     endif ()
+     target_compile_options(${target} PRIVATE -Wall -Wextra -Wno-unused-parameter -Wno-unused-label -Wno-unused-variable -Wno-parentheses-equality)
+ endforeach ()

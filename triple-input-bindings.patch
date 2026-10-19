@@ -1,0 +1,50 @@
+--- a/port/bindings.h
++++ b/port/bindings.h
+@@ -35,6 +35,8 @@
+     {"right", "Right", 1 << 0},    {"lp", "Light punch", 1 << 4},   {"mp", "Medium punch", 1 << 5},
+     {"hp", "Hard punch", 1 << 6},  {"lk", "Light kick", 1 << 7},    {"mk", "Medium kick", 1 << 8},
+     {"hk", "Hard kick", 1 << 9},   {"start", "Start", 1 << 10},     {"coin", "Coin", 1 << 11},
++    {"ppp", "3 punches", (1 << 4) | (1 << 5) | (1 << 6)},
++    {"kkk", "3 kicks", (1 << 7) | (1 << 8) | (1 << 9)},
+ };
+ inline constexpr int kBoundActionCount = static_cast<int>(sizeof(kBoundActions) / sizeof(kBoundActions[0]));
+ inline constexpr int kBoundPlayers = 2;
+@@ -50,12 +52,14 @@
+     static constexpr SDL_Scancode kKeys[kBoundActionCount] = {
+         SDL_SCANCODE_UP, SDL_SCANCODE_DOWN, SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT, SDL_SCANCODE_A, SDL_SCANCODE_S,
+         SDL_SCANCODE_D,  SDL_SCANCODE_Z,    SDL_SCANCODE_X,    SDL_SCANCODE_C,     SDL_SCANCODE_1, SDL_SCANCODE_5,
++        SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, // optional triple-attack shortcuts
+     };
+     static constexpr PadInput kPad[kBoundActionCount] = {
+         {SDL_GAMEPAD_BUTTON_DPAD_UP, -1},   {SDL_GAMEPAD_BUTTON_DPAD_DOWN, -1},      {SDL_GAMEPAD_BUTTON_DPAD_LEFT, -1},
+         {SDL_GAMEPAD_BUTTON_DPAD_RIGHT, -1}, {SDL_GAMEPAD_BUTTON_WEST, -1},          {SDL_GAMEPAD_BUTTON_NORTH, -1},
+         {SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, -1}, {SDL_GAMEPAD_BUTTON_SOUTH, -1},     {SDL_GAMEPAD_BUTTON_EAST, -1},
+         {-1, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER}, {SDL_GAMEPAD_BUTTON_START, -1},        {SDL_GAMEPAD_BUTTON_BACK, -1},
++        {-1, -1}, {-1, -1}, // optional triple-attack shortcuts
+     };
+     static const struct Table {
+         recomp::BindAction actions[kBoundActionCount];
+--- a/recomp-common/launcher/src/ui.cpp
++++ b/recomp-common/launcher/src/ui.cpp
+@@ -252,6 +252,8 @@
+         {"Buttons", "Botões", "Botones", "ボタン", "Boutons"},
+         {"Sticks", "Analógicos", "Palancas", "スティック", "Sticks"},
+         {"(press any button)", "(pressione um botão)", "(pulsa cualquier botón)", "（ボタンを押してください）", "(appuyez sur un bouton)"},
++        {"3 punches", "3 socos", "3 puñetazos", "パンチ３つ", "3 poings"},
++        {"3 kicks", "3 chutes", "3 patadas", "キック３つ", "3 pieds"},
+         {"Keyboard", "Teclado", "Teclado", "キーボード", "Clavier"},
+         {"Gamepad", "Controle", "Mando", "ゲームパッド", "Manette"},
+         {"Player 1", "Jogador 1", "Jugador 1", "プレイヤー１", "Joueur 1"},
+--- a/port/frontend_sdl.cpp
++++ b/port/frontend_sdl.cpp
+@@ -28,7 +28,9 @@
+ 
+     static_assert(kBoundActions[0].bit == kUp && kBoundActions[1].bit == kDown && kBoundActions[2].bit == kLeft &&
+                   kBoundActions[3].bit == kRight && kBoundActions[4].bit == kPunch1 && kBoundActions[9].bit == kKick3 &&
+-                  kBoundActions[10].bit == kStart && kBoundActions[11].bit == kCoin);
++                  kBoundActions[10].bit == kStart && kBoundActions[11].bit == kCoin &&
++                  kBoundActions[12].bit == (kPunch1 | kPunch2 | kPunch3) &&
++                  kBoundActions[13].bit == (kKick1 | kKick2 | kKick3));
+ 
+     constexpr int kDead = 16000; // how far a stick or a trigger must go to count
+ 
