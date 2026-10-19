@@ -32,6 +32,8 @@ As preferências e o EEPROM criado localmente ficam em `userdata/`, também igno
 
 Para usar músicas próprias, selecione uma pasta em **Trilha sonora personalizada** na página **Jogo** do launcher e ative **Custom soundtrack** em **Recursos** (ou no menu do jogo). Arquivos MP3, OGG, FLAC e WAV sem nomes específicos tocam como uma lista de reprodução. O jogo cria `songs.txt` na pasta: se quiser substituir uma faixa específica, use o número de música indicado nesse arquivo como nome do arquivo de áudio, por exemplo `07.mp3`. A opção **On, shuffled** embaralha a lista. Efeitos sonoros e vozes continuam vindo do jogo.
 
+Para trocar apenas as músicas de luta dos personagens, copie [o exemplo de `soundtrack.ini`](examples/soundtrack-personagens.ini) para a pasta escolhida no launcher, renomeie-o para `soundtrack.ini` e coloque nessa pasta seus arquivos `Ryu.mp3`, `Ken.mp3` etc. Os códigos no exemplo foram conferidos durante partidas de treino nos 16 cenários. As faixas não incluídas continuam originais. `songs.txt` é uma referência criada automaticamente pelo jogo; edições nele são sobrescritas.
+
 ## Testes e integração
 
 Com as ROMs locais, o porte foi compilado do zero no Windows e passou nas verificações de equivalência entre código traduzido e interpretador e de repetibilidade do `cps2recomp`. Um teste automatizado confirmou a troca de REC para PLAY e a reprodução idêntica após salvar e carregar o estado. Ainda faltam testes manuais abrangentes para cada cenário e golpe.
