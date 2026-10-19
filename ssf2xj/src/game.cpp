@@ -49,7 +49,8 @@ void RegisterGame() {
         const bool otherScreen = state != 0 && !fight;
         const int shape = FeatureValue("display_shape");
         machine.video.wide.side = shape >= 3 && (fight || otherScreen) ? Video::kMaxSide : 0;
-        machine.video.wide.guardStageEdges = shape == 3 && fight;
+        machine.video.wide.guardStageEdges = shape == 3 && fight && machine.ram[0x8c4f] != 0x0f;
+        machine.video.wide.fadeMenuSides = shape >= 3 && otherScreen;
         // Traced in multiple stages: scroll 2 moves from 0 at the left limit to 384 at the right.
         machine.video.wide.maxStageScrollX = 384;
         const bool cammyStage = machine.ram[0x8c4f] == 0x0c;
@@ -57,9 +58,9 @@ void RegisterGame() {
         machine.video.wide.squareBlackEdges = shape == 3 && fight && cammyStage;
         machine.video.wide.fillHoles = shape == 4 && fight;
         machine.video.wide.fillSideHoles = shape == 3 && fight && !cammyStage && !deeJayStage;
-        // Dee Jay's row-scrolled sky can expose unpainted pixels in the upper side columns.
-        // Blacken only those gaps; keep valid stage tiles and objects in the wide area.
-        machine.video.wide.blankSideBackground = shape == 3 && fight && deeJayStage;
+        // Dee Jay's row-scrolled sky wraps into stale tiles outside the arcade
+        // picture. Extend the painted background while keeping wide objects.
+        machine.video.wide.blankSideBackground = false;
         // A Super Combo knockout paints its burst across the full raster in scroll 3, but
         // stage scrolls obscure the extra columns. FF8462/FF8862 are remaining life;
         // FinishPicture also checks for the burst so ordinary KO frames keep their stage.
@@ -68,7 +69,8 @@ void RegisterGame() {
         // Cammy's castle leaves stale scroll tiles beyond the original 384 columns.
         // FF8C4F holds the selected stage (0x0C = Cammy); preserve wide objects
         // while mirroring only the castle background in the extra side columns.
-        machine.video.wide.mirrorSideBackground = shape == 4 && fight && cammyStage;
+        machine.video.wide.mirrorSideBackground = (shape == 4 && fight && cammyStage) ||
+            (shape == 3 && fight && deeJayStage);
     };
     TheGame().frame = [](Machine &machine) {
         TrainingFrame(machine);
