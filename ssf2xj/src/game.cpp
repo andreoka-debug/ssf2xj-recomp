@@ -35,31 +35,27 @@ void RegisterGame() {
     TheGame().inTraining = TrainingActive;
     TheGame().noRunAhead = TrainingActive;
     // FF8009 was traced through character select, VS, rounds and match transitions in ssf2xj.
-    // The opening stays 4:3. Later screens render the CPS-2's full 512-column raster;
-    // this does not change the game's camera or collision limits.
+    // Only the fight stage uses the CPS-2's full 512-column raster. Menus,
+    // score screens and the next-opponent screen keep their original 4:3 view.
     // At the true camera edges, safe wide covers only the columns beyond the stage.
     TheGame().beforeFrame = [](Machine &machine) {
         TrainingBeforeFrame(machine);
         EasySelectGouki(machine);
         const uint8_t state = machine.ram[0x8009];
         const bool fightState = state == 8 || state == 10 || state == 12;
-        // Keep the same picture width through the score count and short pre-round state.
-        const bool betweenRounds = state == 6 || state == 14 || state == 16;
-        const bool fight = fightState || betweenRounds;
-        const bool otherScreen = state != 0 && !fight;
         const int shape = FeatureValue("display_shape");
-        machine.video.wide.side = shape >= 3 && (fight || otherScreen) ? Video::kMaxSide : 0;
-        machine.video.wide.guardStageEdges = shape == 3 && fight && machine.ram[0x8c4f] != 0x0f;
-        machine.video.wide.fadeMenuSides = shape >= 3 && otherScreen;
+        machine.video.wide.side = shape >= 3 && fightState ? Video::kMaxSide : 0;
+        machine.video.wide.guardStageEdges = shape == 3 && fightState && machine.ram[0x8c4f] != 0x0f;
+        machine.video.wide.fadeMenuSides = false;
         // Traced in multiple stages: scroll 2 moves from 0 at the left limit to 384 at the right.
         machine.video.wide.maxStageScrollX = 384;
         const bool cammyStage = machine.ram[0x8c4f] == 0x0c;
         const bool deeJayStage = machine.ram[0x8c4f] == 0x0f;
-        machine.video.wide.squareBlackEdges = shape == 3 && fight && cammyStage;
-        machine.video.wide.fillHoles = shape == 4 && fight;
-        machine.video.wide.fillSideHoles = shape == 3 && fight && !cammyStage && !deeJayStage;
-        // Dee Jay's row-scrolled sky wraps into stale tiles outside the arcade
-        // picture. Extend the painted background while keeping wide objects.
+        machine.video.wide.squareBlackEdges = shape == 3 && fightState && cammyStage;
+        machine.video.wide.fillHoles = shape == 4 && fightState;
+        machine.video.wide.fillSideHoles = shape == 3 && fightState && !cammyStage && !deeJayStage;
+        // Keep the original stage pixels in the extra columns; edge effects
+        // such as mirroring or blurring look worse on Dee Jay's moving backdrop.
         machine.video.wide.blankSideBackground = false;
         // A Super Combo knockout paints its burst across the full raster in scroll 3, but
         // stage scrolls obscure the extra columns. FF8462/FF8862 are remaining life;
@@ -69,8 +65,7 @@ void RegisterGame() {
         // Cammy's castle leaves stale scroll tiles beyond the original 384 columns.
         // FF8C4F holds the selected stage (0x0C = Cammy); preserve wide objects
         // while mirroring only the castle background in the extra side columns.
-        machine.video.wide.mirrorSideBackground = (shape == 4 && fight && cammyStage) ||
-            (shape == 3 && fight && deeJayStage);
+        machine.video.wide.mirrorSideBackground = shape == 4 && fightState && cammyStage;
     };
     TheGame().frame = [](Machine &machine) {
         TrainingFrame(machine);
